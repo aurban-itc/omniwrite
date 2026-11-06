@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.2', '8.3']
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: omniwrite
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -proot" --health-interval=5s
+          --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql, pdo_sqlite, sodium, mbstring
+          tools: composer
+      - run: composer validate --strict
+      - run: composer install --no-interaction --prefer-dist
+      - name: PHP-Lint
+        run: composer lint
+      - name: Tests
+        run: composer test
+      - name: Migrationen gegen MySQL
+        run: |
+          cat > /tmp/ci-config.php <<'PHP'
+          <?php return ['db' => ['dsn' => 'mysql:host=127.0.0.1;port=3306;dbname=omniwrite;charset=utf8mb4', 'user' => 'root', 'password' => 'root']];
+          PHP
+          OMNIWRITE_CONFIG=/tmp/ci-config.php php bin/migrate.php
+          OMNIWRITE_CONFIG=/tmp/ci-config.php php bin/migrate.php

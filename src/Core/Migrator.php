@@ -1,0 +1,57 @@
+<?php
+declare(strict_types=1);
+
+namespace OmniWrite\Core;
+
+use PDO;
+use RuntimeException;
+
+/**
+ * Führt migrations/NNNN_name.sql in Reihenfolge aus und merkt sich angewendete Dateien.
+ * Dateien werden nach dem Anwenden nie mehr geändert; Korrekturen kommen als neue Migration.
+ */
+final class Migrator
+{
+    public function __construct(private readonly PDO $pdo, private readonly string $dir)
+    {
+    }
+
+    /** @return list<string> neu angewendete Migrationen */
+    public function migrate(): array
+    {
+        $this->pdo->exec(
+            'CREATE TABLE IF NOT EXISTS schema_migrations (
+                name VARCHAR(190) NOT NULL PRIMARY KEY,
+                applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )'
+        );
+        $done = $this->pdo->query('SELECT name FROM schema_migrations')->fetchAll(PDO::FETCH_COLUMN);
+        $applied = [];
+        foreach ($this->pending(array_flip($done)) as $name => $file) {
+            $sql = file_get_contents($file);
+            if ($sql === false) {
+                throw new RuntimeException("Migration nicht lesbar: $file");
+            }
+            // MySQL committet DDL implizit; daher keine Transaktion, Migrationen klein und idempotent halten.
+            $this->pdo->exec($sql);
+            $this->pdo->prepare('INSERT INTO schema_migrations (name) VALUES (?)')->execute([$name]);
+            $applied[] = $name;
+        }
+        return $applied;
+    }
+
+    /** @param array<string, int> $done @return array<string, string> name => Pfad */
+    private function pending(array $done): array
+    {
+        $files = glob(rtrim($this->dir, '/') . '/[0-9][0-9][0-9][0-9]_*.sql') ?: [];
+        sort($files);
+        $pending = [];
+        foreach ($files as $file) {
+            $name = basename($file);
+            if (!isset($done[$name])) {
+                $pending[$name] = $file;
+            }
+        }
+        return $pending;
+    }
+}
