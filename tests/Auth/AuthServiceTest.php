@@ -106,4 +106,16 @@ final class AuthServiceTest extends DbTestCase
         self::assertTrue($u->isSuperadmin);
         self::assertSame([], (new AccountRepository($this->pdo))->membershipsOf($u->id));
     }
+
+    public function testOverlongEmailIsRejectedAndStillRateLimited(): void
+    {
+        $auth = $this->auth();
+        $long = str_repeat('a', 200) . '@example.com';
+        $now = 1_800_000_000;
+        for ($i = 0; $i < 5; $i++) {
+            self::assertNull($auth->attempt($long, 'whatever whatever', '3.3.3.3', $now));
+        }
+        $this->expectException(AccessDeniedException::class);
+        $auth->attempt($long, 'whatever whatever', '3.3.3.3', $now);
+    }
 }

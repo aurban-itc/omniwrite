@@ -120,4 +120,27 @@ final class SiteServiceTest extends DbTestCase
             self::assertSame(['locale', 'timezone'], array_keys($e->errors));
         }
     }
+
+    public function testRaceOnUniqueSlugBecomesValidationError(): void
+    {
+        [$owner, $acc] = $this->member('o@example.com', Role::Owner);
+        $this->service->create($owner, $acc, $this->site('race-slug'));
+
+        // Simuliert: Vorabprüfung sagt "frei", der Unique-Index schlägt beim Insert trotzdem zu.
+        $racing = new class ($this->pdo) extends SiteRepository {
+            private int $calls = 0;
+
+            public function slugExists(string $slug): bool
+            {
+                return $this->calls++ > 0;
+            }
+        };
+        $service = new SiteService($racing, $this->accounts, new AuditLogger($this->pdo));
+        try {
+            $service->create($owner, $acc, $this->site('race-slug'));
+            self::fail('ValidationException erwartet');
+        } catch (ValidationException $e) {
+            self::assertSame('err.slug_taken', $e->errors['slug']);
+        }
+    }
 }

@@ -113,10 +113,15 @@ final class AuthService
     {
         $now ??= time();
         $email = strtolower(trim($email));
-        if ($this->limiter->isBlocked($email, $ip, $now)) {
+        // Überlange Eingaben passen nicht in login_attempts.email; sie zählen unter einem Hash weiter.
+        $key = strlen($email) > 190 ? 'sha256:' . hash('sha256', $email) : $email;
+        if ($this->limiter->isBlocked($key, $ip, $now)) {
             throw new AccessDeniedException('Zu viele Versuche');
         }
-        $row = $this->users->findRowByEmail($email);
+        // Versuch sofort als Fehlschlag verbuchen, bevor das langsame Hashing läuft: parallele Anfragen
+        // sehen ihn, und ein Burst überschreitet das Limit nicht um die Zahl der gleichzeitigen Requests.
+        $this->limiter->record($key, $ip, false, $now);
+        $row = strlen($email) > 190 ? null : $this->users->findRowByEmail($email);
         if ($row === null) {
             $this->hasher->burn($password);
         }
@@ -124,12 +129,11 @@ final class AuthService
         $user = $ok ? User::fromRow($row) : null;
         $accepted = $user !== null && $user->isActive();
 
-        $this->limiter->record($email, $ip, $accepted, $now);
         if (!$accepted || $user === null) {
-            $this->audit->log('auth.login_failed', $user?->id, null, ['email' => $email], $ip);
+            $this->audit->log('auth.login_failed', $user?->id, null, ['email' => substr($email, 0, 190)], $ip);
             return null;
         }
-        $this->limiter->clear($email);
+        $this->limiter->clear($key);
         if ($this->hasher->needsRehash((string) $row['password_hash'])) {
             $this->users->updatePasswordHash($user->id, $this->hasher->hash($password));
         }

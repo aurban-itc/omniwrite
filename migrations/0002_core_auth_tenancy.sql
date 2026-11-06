@@ -1,17 +1,4 @@
--- Phase 1: Nutzer, Rollen, Pläne, Domains, Nutzungszähler, Audit-Log, Login-Versuche.
-CREATE TABLE IF NOT EXISTS plans (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    code VARCHAR(32) NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    posts_per_month INT UNSIGNED NULL,
-    trial_days INT UNSIGNED NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_plans_code (code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Platzhalter bis die Limits entschieden sind (NULL = unbegrenzt).
-INSERT IGNORE INTO plans (code, name) VALUES ('default', 'Standard');
-
+-- Phase 1: Nutzer, Rollen, Domains, Nutzungszähler, Audit-Log, Login-Versuche.
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(190) NOT NULL,

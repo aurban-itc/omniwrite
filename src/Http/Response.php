@@ -20,6 +20,7 @@ final class Response
             'X-Content-Type-Options' => 'nosniff',
             'X-Frame-Options' => 'DENY',
             'Referrer-Policy' => 'same-origin',
+            'Strict-Transport-Security' => 'max-age=31536000',
             'Content-Security-Policy' => "default-src 'self'; style-src 'self' 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
         ], $body);
     }

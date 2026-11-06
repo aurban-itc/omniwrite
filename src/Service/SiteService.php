@@ -10,6 +10,7 @@ use OmniWrite\Domain\User;
 use OmniWrite\Domain\ValidationException;
 use OmniWrite\Repository\AccountRepository;
 use OmniWrite\Repository\SiteRepository;
+use PDOException;
 
 /** Berechtigungen und Validierung rund um Sites. Controller rufen nur diesen Service, nie die Repositories. */
 final class SiteService
@@ -65,7 +66,15 @@ final class SiteService
             throw new ValidationException($errors);
         }
 
-        $id = $this->sites->create($accountId, $slug, $name, $locale, $timezone);
+        try {
+            $id = $this->sites->create($accountId, $slug, $name, $locale, $timezone);
+        } catch (PDOException $e) {
+            // Parallele Anfrage war schneller: Unique-Index auf slug statt 500 als Eingabefehler melden.
+            if ($e->getCode() === '23000' && $this->sites->slugExists($slug)) {
+                throw new ValidationException(['slug' => 'err.slug_taken']);
+            }
+            throw $e;
+        }
         $this->audit->log('site.create', $user->id, $accountId, ['site_id' => $id, 'slug' => $slug], $ip);
         return $id;
     }

@@ -10,7 +10,7 @@ use PDO;
  * (Mitgliedschaft) prüft der aufrufende Service. Alles unterhalb einer Site
  * (Posts, Themen, ...) läuft über SiteScopedRepository.
  */
-final class SiteRepository
+class SiteRepository
 {
     public function __construct(private readonly PDO $pdo)
     {
