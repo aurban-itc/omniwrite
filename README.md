@@ -27,6 +27,9 @@ php -S localhost:8000 -t public                  # lokal starten, /health prüfe
 
 `config/config.php` enthält Datenbank, API-Keys und den Master-Key (libsodium) und steht in `.gitignore`.
 
+HTTPS: Mit `app.force_https` (Standard an) leitet PHP HTTP auf die `base_url` um. `X-Forwarded-Proto` wird nur beachtet,
+wenn `app.trust_forwarded_proto` gesetzt ist, also hinter einem TLS-beendenden Proxy, der den Header selbst setzt.
+
 Ersten Superadmin anlegen (danach unter `/login` anmelden):
 
 ```bash

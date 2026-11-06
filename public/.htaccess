@@ -1,10 +1,6 @@
 RewriteEngine On
 
-# Nur HTTPS (Login und Session-Cookie). Bewusst ohne X-Forwarded-Proto: der Header ist vom Client fälschbar.
-RewriteCond %{HTTPS} off
-RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:\d+)?$
-RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-
+# HTTPS wird in PHP erzwungen (src/Http/HttpsPolicy.php), damit ein TLS-beendender Proxy konfigurierbar bleibt.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [L]
