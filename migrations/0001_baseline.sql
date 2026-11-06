@@ -1,11 +1,12 @@
+-- Replay-sicher: nur CREATE TABLE IF NOT EXISTS / INSERT IGNORE, ein Abbruch mitten drin lässt sich neu starten.
 -- Basisschema (Phase 0). Wird in Phase 1 um users, account_users, domains, plans, usage_events ergänzt.
-CREATE TABLE accounts (
+CREATE TABLE IF NOT EXISTS accounts (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(190) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE sites (
+CREATE TABLE IF NOT EXISTS sites (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     account_id BIGINT UNSIGNED NOT NULL,
     slug VARCHAR(64) NOT NULL,
@@ -17,7 +18,7 @@ CREATE TABLE sites (
     CONSTRAINT fk_sites_account FOREIGN KEY (account_id) REFERENCES accounts (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE posts (
+CREATE TABLE IF NOT EXISTS posts (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     site_id BIGINT UNSIGNED NOT NULL,
     title VARCHAR(255) NOT NULL,

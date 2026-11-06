@@ -9,6 +9,12 @@ use RuntimeException;
 /**
  * Führt migrations/NNNN_name.sql in Reihenfolge aus und merkt sich angewendete Dateien.
  * Dateien werden nach dem Anwenden nie mehr geändert; Korrekturen kommen als neue Migration.
+ *
+ * MySQL committet DDL implizit, ein Abbruch kann eine Datei angewendet, aber nicht verbucht hinterlassen.
+ * Regel: jede Migration muss komplett wiederholbar sein (CREATE TABLE IF NOT EXISTS, INSERT IGNORE).
+ * Ein nacktes ALTER TABLE ist das nicht; es wird über information_schema abgesichert (siehe 0003_plans.sql).
+ * Bereits angewendete Dateien werden nie geändert, Anpassungen kommen als neue Vorwärts-Migration.
+ * tests/Core/MigrationReplayTest.php prüft Wiederholbarkeit und Upgrade vom alten Stand gegen MySQL.
  */
 final class Migrator
 {
@@ -33,11 +39,27 @@ final class Migrator
                 throw new RuntimeException("Migration nicht lesbar: $file");
             }
             // MySQL committet DDL implizit; daher keine Transaktion, Migrationen klein und idempotent halten.
-            $this->pdo->exec($sql);
+            $this->run($sql);
             $this->pdo->prepare('INSERT INTO schema_migrations (name) VALUES (?)')->execute([$name]);
             $applied[] = $name;
         }
         return $applied;
+    }
+
+    /**
+     * PDO meldet bei exec() mit mehreren Statements nur den Fehler des ersten. nextRowset() holt die
+     * übrigen Ergebnisse ab und wirft bei einem Fehler, sonst würde eine halb gelaufene Datei verbucht.
+     */
+    private function run(string $sql): void
+    {
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) !== 'mysql') {
+            $this->pdo->exec($sql);
+            return;
+        }
+        $stmt = $this->pdo->query($sql);
+        do {
+            // Ergebnisse verwerfen; Fehler werfen hier.
+        } while ($stmt->nextRowset());
     }
 
     /** @param array<string, int> $done @return array<string, string> name => Pfad */

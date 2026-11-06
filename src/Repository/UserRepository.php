@@ -1,0 +1,68 @@
+<?php
+declare(strict_types=1);
+
+namespace OmniWrite\Repository;
+
+use OmniWrite\Domain\User;
+use PDO;
+
+/** Globale Tabelle (nicht mandantengebunden): Nutzer gehören über account_users zu Accounts. */
+final class UserRepository
+{
+    public function __construct(private readonly PDO $pdo)
+    {
+    }
+
+    public function find(int $id): ?User
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM users WHERE id = ?');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        return $row ? User::fromRow($row) : null;
+    }
+
+    /** @return array<string, mixed>|null Rohzeile inkl. password_hash (nur für Login). */
+    public function findRowByEmail(string $email): ?array
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM users WHERE email = ?');
+        $stmt->execute([$email]);
+        return $stmt->fetch() ?: null;
+    }
+
+    public function emailExists(string $email): bool
+    {
+        return $this->findRowByEmail($email) !== null;
+    }
+
+    public function create(string $email, string $passwordHash, string $name, string $locale, string $status, bool $isSuperadmin = false): int
+    {
+        $this->pdo->prepare(
+            'INSERT INTO users (email, password_hash, name, locale, status, is_superadmin) VALUES (?, ?, ?, ?, ?, ?)'
+        )->execute([$email, $passwordHash, $name, $locale, $status, $isSuperadmin ? 1 : 0]);
+        return (int) $this->pdo->lastInsertId();
+    }
+
+    public function setStatus(int $id, string $status): bool
+    {
+        $stmt = $this->pdo->prepare('UPDATE users SET status = ? WHERE id = ?');
+        $stmt->execute([$status, $id]);
+        return $stmt->rowCount() > 0;
+    }
+
+    public function updatePasswordHash(int $id, string $hash): void
+    {
+        $this->pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?')->execute([$hash, $id]);
+    }
+
+    public function touchLogin(int $id, string $when): void
+    {
+        $this->pdo->prepare('UPDATE users SET last_login_at = ? WHERE id = ?')->execute([$when, $id]);
+    }
+
+    /** @return list<User> */
+    public function pending(): array
+    {
+        $rows = $this->pdo->query("SELECT * FROM users WHERE status = 'pending' ORDER BY id")->fetchAll();
+        return array_map(User::fromRow(...), $rows);
+    }
+}

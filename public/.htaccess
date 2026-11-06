@@ -1,4 +1,6 @@
 RewriteEngine On
+
+# HTTPS wird in PHP erzwungen (src/Http/HttpsPolicy.php), damit ein TLS-beendender Proxy konfigurierbar bleibt.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [L]

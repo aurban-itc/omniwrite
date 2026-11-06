@@ -37,6 +37,12 @@ jobs:
         run: composer lint
       - name: Tests
         run: composer test
+      - name: Tests gegen MySQL (echte Migrationen)
+        env:
+          OMNIWRITE_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=omniwrite;charset=utf8mb4
+          OMNIWRITE_TEST_USER: root
+          OMNIWRITE_TEST_PASSWORD: root
+        run: composer test
       - name: Migrationen gegen MySQL
         run: |
           cat > /tmp/ci-config.php <<'PHP'
