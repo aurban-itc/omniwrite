@@ -7,7 +7,7 @@ return [
         'env'      => 'production',            // production | development
         'base_url' => 'https://omniwrite.urbanlabs.ai',
         'default_locale' => 'de',              // de | en
-        // HTTP wird auf base_url (https) umgeleitet. Hinter einem TLS-beendenden Proxy trust_forwarded_proto
+        // HTTP wird auf base_url umgeleitet, solange diese mit https:// beginnt (lokal: http://localhost:8000). Hinter einem TLS-beendenden Proxy trust_forwarded_proto
         // nur aktivieren, wenn der Proxy X-Forwarded-Proto selbst setzt und Client-Werte überschreibt.
         'force_https' => true,
         'trust_forwarded_proto' => false,

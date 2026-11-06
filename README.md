@@ -25,6 +25,9 @@ php bin/migrate.php                              # Migrationen anwenden
 php -S localhost:8000 -t public                  # lokal starten, /health prüfen
 ```
 
+Lokal in `config/config.php` `app.base_url` auf `http://localhost:8000` setzen: Bei einer nicht-https `base_url` leitet
+OmniWrite nicht auf HTTPS um (sonst würde der lokale Server auf die Produktions-URL umleiten).
+
 `config/config.php` enthält Datenbank, API-Keys und den Master-Key (libsodium) und steht in `.gitignore`.
 
 HTTPS: Mit `app.force_https` (Standard an) leitet PHP HTTP auf die `base_url` um. `X-Forwarded-Proto` wird nur beachtet,
