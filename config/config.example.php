@@ -8,6 +8,10 @@ return [
         'base_url' => 'https://omniwrite.urbanlabs.ai',
         'default_locale' => 'de',              // de | en
     ],
+    'auth' => [
+        // open = sofort aktiv, approval = Superadmin schaltet frei, closed = keine Selbstregistrierung
+        'registration' => 'approval',
+    ],
     'db' => [
         'dsn'      => 'mysql:host=localhost;dbname=omniwrite;charset=utf8mb4',
         'user'     => 'omniwrite',

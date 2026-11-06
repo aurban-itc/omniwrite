@@ -3,7 +3,23 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use OmniWrite\Http\Kernel;
+use OmniWrite\App;
+use OmniWrite\Core\Config;
+use OmniWrite\Core\Database;
+use OmniWrite\Http\Request;
 
-$path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-(new Kernel())->handle($_SERVER['REQUEST_METHOD'] ?? 'GET', $path)->send();
+$https = ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+session_name('omniwrite');
+session_set_cookie_params(['httponly' => true, 'secure' => $https, 'samesite' => 'Lax', 'path' => '/']);
+session_start();
+
+try {
+    $config = Config::fromFile(getenv('OMNIWRITE_CONFIG') ?: __DIR__ . '/../config/config.php');
+    $kernel = App::kernel(Database::connect($config), $config);
+    $kernel->handle(Request::fromGlobals($_SESSION))->send();
+} catch (Throwable $e) {
+    error_log((string) $e);
+    http_response_code(500);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'Internal error';
+}

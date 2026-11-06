@@ -27,6 +27,15 @@ php -S localhost:8000 -t public                  # lokal starten, /health prüfe
 
 `config/config.php` enthält Datenbank, API-Keys und den Master-Key (libsodium) und steht in `.gitignore`.
 
+Ersten Superadmin anlegen (danach unter `/login` anmelden):
+
+```bash
+OMNIWRITE_ADMIN_PASSWORD='mindestens-10-zeichen' php bin/create-superadmin.php mail@beispiel.de "Name"
+```
+
+Die Selbstregistrierung steuert `auth.registration` in der Config: `open` (sofort aktiv), `approval`
+(Superadmin schaltet unter `/admin` frei) oder `closed`.
+
 ## Migrationen
 
 SQL-Dateien in `migrations/` als `NNNN_name.sql`. `bin/migrate.php` wendet neue Dateien der Reihe nach an
@@ -40,8 +49,12 @@ composer test   # PHPUnit
 ```
 
 GitHub Actions (`.github/workflows/ci.yml`) führt Lint und Tests auf PHP 8.2/8.3 aus und spielt die Migrationen
-zweimal gegen MySQL 8 ein. Die Mandantentrennung ist per Test abgesichert (`tests/Repository`).
+zweimal gegen MySQL 8 ein. Die Tests laufen lokal gegen SQLite (`tests/Support/SqliteSchema.php` spiegelt die
+Migrationen, bei neuen Migrationen mitpflegen) und in der CI zusätzlich gegen MySQL mit den echten Migrationen
+(`OMNIWRITE_TEST_DSN`). Die Mandantentrennung ist per Test abgesichert (`tests/Repository`, `tests/Service`).
 
 ## Status
 
-Phase 0 (Grundgerüst). Weiter mit Phase 1 (Kern und Mandanten), siehe Architektur-Dokument.
+Phase 1 (Kern und Mandanten): Registrierung, Login, Rollen (Owner, Editor, Superadmin), Sites anlegen, Superadmin-Bereich.
+Noch offen in dieser Phase: 2FA (TOTP) für den Superadmin, Impersonation, Passwort-Reset (braucht den Mailversand aus Phase 4).
+Weiter mit Phase 2 (Extraktion), siehe Architektur-Dokument.
