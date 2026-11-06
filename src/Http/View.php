@@ -21,6 +21,7 @@ final class View
         $locale = $request->locale;
         $vars = $data + [
             'user' => $request->user,
+            'impersonator' => $request->impersonator,
             'locale' => $locale,
             'csrf' => $this->csrf->token($request->session),
             'e' => static fn (mixed $s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),

@@ -7,10 +7,14 @@ use OmniWrite\Auth\AuditLogger;
 use OmniWrite\Auth\AuthService;
 use OmniWrite\Auth\PasswordHasher;
 use OmniWrite\Auth\RateLimiter;
+use OmniWrite\Auth\SecretBox;
+use OmniWrite\Auth\TwoFactorService;
 use OmniWrite\Core\Config;
 use OmniWrite\Http\Controller\AdminController;
 use OmniWrite\Http\Controller\AuthController;
 use OmniWrite\Http\Controller\DashboardController;
+use OmniWrite\Http\Controller\ImpersonationController;
+use OmniWrite\Http\Controller\TwoFactorController;
 use OmniWrite\Http\Csrf;
 use OmniWrite\Http\Kernel;
 use OmniWrite\Http\Response;
@@ -18,6 +22,7 @@ use OmniWrite\Http\Router;
 use OmniWrite\Http\View;
 use OmniWrite\Repository\AccountRepository;
 use OmniWrite\Repository\SiteRepository;
+use OmniWrite\Repository\TotpRepository;
 use OmniWrite\Repository\UserRepository;
 use OmniWrite\Service\SiteService;
 use OmniWrite\Support\Translator;
@@ -50,7 +55,17 @@ final class App
         $auth = self::buildAuth($pdo, $config);
         $sites = new SiteService(new SiteRepository($pdo), $accounts, $audit);
 
-        $authC = new AuthController($auth, $view);
+        $twoFactor = new TwoFactorService(
+            $pdo,
+            new TotpRepository($pdo),
+            new SecretBox((string) $config->get('security.master_key', '')),
+            new RateLimiter($pdo),
+            $audit,
+        );
+
+        $authC = new AuthController($auth, $view, $twoFactor);
+        $tfaC = new TwoFactorController($view, $twoFactor, $users);
+        $impC = new ImpersonationController($users, $audit);
         $dash = new DashboardController($view, $accounts, $sites);
         $admin = new AdminController($view, $users, $accounts, $audit);
 
@@ -62,11 +77,17 @@ final class App
         $router->add('POST', '/logout', $authC->logout(...));
         $router->add('GET', '/register', $authC->registerForm(...));
         $router->add('POST', '/register', $authC->register(...));
+        $router->add('GET', '/login/2fa', $tfaC->loginForm(...));
+        $router->add('POST', '/login/2fa', $tfaC->login(...));
+        $router->add('GET', '/account/2fa', $tfaC->setupForm(...), 'user');
+        $router->add('POST', '/account/2fa', $tfaC->setupConfirm(...), 'user');
+        $router->add('POST', '/admin/impersonate/{id}', $impC->start(...), 'superadmin');
+        $router->add('POST', '/impersonate/stop', $impC->stop(...), 'user');
         $router->add('GET', '/dashboard', $dash->show(...), 'user');
         $router->add('POST', '/sites', $dash->createSite(...), 'user');
         $router->add('GET', '/admin', $admin->index(...), 'superadmin');
         $router->add('POST', '/admin/users/{id}/activate', $admin->activate(...), 'superadmin');
 
-        return new Kernel($router, $users, $csrf, (string) $config->get('app.default_locale', 'de'));
+        return new Kernel($router, $users, $csrf, $twoFactor, $audit, (string) $config->get('app.default_locale', 'de'));
     }
 }

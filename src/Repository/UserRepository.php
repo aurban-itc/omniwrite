@@ -65,4 +65,18 @@ final class UserRepository
         $rows = $this->pdo->query("SELECT * FROM users WHERE status = 'pending' ORDER BY id")->fetchAll();
         return array_map(User::fromRow(...), $rows);
     }
+
+    /** Aktive Nicht-Superadmins samt Account, für die Impersonation im Admin-Bereich. @return list<array{id: int, email: string, name: string, account: string}> */
+    public function listImpersonable(): array
+    {
+        $rows = $this->pdo->query(
+            "SELECT u.id, u.email, u.name, a.name AS account FROM users u
+             JOIN account_users au ON au.user_id = u.id JOIN accounts a ON a.id = au.account_id
+             WHERE u.is_superadmin = 0 AND u.status = 'active' ORDER BY a.id, u.id"
+        )->fetchAll();
+        return array_map(
+            static fn (array $r): array => ['id' => (int) $r['id'], 'email' => (string) $r['email'], 'name' => (string) $r['name'], 'account' => (string) $r['account']],
+            $rows
+        );
+    }
 }

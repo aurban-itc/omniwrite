@@ -8,6 +8,8 @@ use OmniWrite\Domain\User;
 final class Request
 {
     public ?User $user = null;
+    /** Echter Superadmin, solange er als anderer Nutzer eingeloggt ist (Impersonation). */
+    public ?User $impersonator = null;
     public string $locale = 'de';
     /** @var array<string, string> Pfadparameter aus dem Router, z. B. {id}. */
     public array $params = [];

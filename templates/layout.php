@@ -32,6 +32,12 @@ button.link{background:none;border:0;padding:0;margin:0;color:#0645ad;text-decor
     <a href="?lang=<?= $locale === 'de' ? 'en' : 'de' ?>"><?= $locale === 'de' ? 'EN' : 'DE' ?></a>
   <?php endif; ?>
 </nav>
+<?php if (!empty($impersonator)): ?>
+<div class="card" style="border-color:#b00020">
+  <?= $e($t('imp.banner', ['name' => $user->name ?? ''])) ?>
+  <form method="post" action="/impersonate/stop" style="display:inline"><input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button><?= $e($t('imp.stop')) ?></button></form>
+</div>
+<?php endif; ?>
 <main><?= $content ?></main>
 </body>
 </html>

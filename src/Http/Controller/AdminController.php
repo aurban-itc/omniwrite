@@ -26,6 +26,7 @@ final class AdminController
         return $this->view->render($r, 'admin', [
             'pending' => $this->users->pending(),
             'accounts' => $this->accounts->allWithSiteCount(),
+            'impersonable' => $this->users->listImpersonable(),
         ]);
     }
 

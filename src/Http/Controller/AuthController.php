@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace OmniWrite\Http\Controller;
 
 use OmniWrite\Auth\AuthService;
+use OmniWrite\Auth\TwoFactorService;
 use OmniWrite\Domain\AccessDeniedException;
 use OmniWrite\Domain\ValidationException;
 use OmniWrite\Http\Request;
@@ -12,8 +13,11 @@ use OmniWrite\Http\View;
 
 final class AuthController
 {
-    public function __construct(private readonly AuthService $auth, private readonly View $view)
-    {
+    public function __construct(
+        private readonly AuthService $auth,
+        private readonly View $view,
+        private readonly TwoFactorService $twoFactor,
+    ) {
     }
 
     public function loginForm(Request $r): Response
@@ -33,6 +37,11 @@ final class AuthController
             return $this->view->render($r, 'login', ['errors' => ['form' => 'err.invalid_credentials'], 'old' => ['email' => $email]], 422);
         }
         $r->session->regenerate();
+        if ($this->twoFactor->isEnabled($user)) {
+            // Passwort stimmt, zweiter Faktor fehlt noch: noch keine angemeldete Sitzung.
+            $r->session->set('pending_2fa', ['user_id' => $user->id, 'at' => time()]);
+            return Response::redirect('/login/2fa');
+        }
         $r->session->set('user_id', $user->id);
         return Response::redirect($user->isSuperadmin ? '/admin' : '/dashboard');
     }

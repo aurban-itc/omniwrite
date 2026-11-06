@@ -23,7 +23,7 @@ return [
     ],
     'security' => [
         // 32 Byte, base64-kodiert: php -r 'echo base64_encode(random_bytes(32)), PHP_EOL;'
-        // Verschlüsselt Anbindungs-Zugangsdaten (libsodium). Niemals ändern ohne Re-Encrypt.
+        // Verschlüsselt 2FA-Secrets und später Anbindungs-Zugangsdaten (libsodium). Niemals ändern ohne Re-Encrypt.
         'master_key' => '',
     ],
     'ai' => [

@@ -13,3 +13,12 @@
 <?php foreach ($accounts as $a): ?>
   <div class="card"><?= $e($a['name']) ?> · <?= $e($t('admin.sites_count', ['n' => $a['sites']])) ?></div>
 <?php endforeach; ?>
+<h2><?= $e($t('admin.users')) ?></h2>
+<?php foreach ($impersonable as $u): ?>
+  <div class="card">
+    <?= $e($u['name']) ?> &lt;<?= $e($u['email']) ?>&gt; · <?= $e($u['account']) ?>
+    <form method="post" action="/admin/impersonate/<?= (int) $u['id'] ?>" style="display:inline">
+      <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button><?= $e($t('imp.start')) ?></button>
+    </form>
+  </div>
+<?php endforeach; ?>
