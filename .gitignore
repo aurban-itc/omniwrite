@@ -1,0 +1,11 @@
+/vendor/
+/config/config.php
+/storage/*
+!/storage/.gitkeep
+.phpunit.cache/
+.phpunit.result.cache
+.env
+.idea/
+.vscode/
+*.log
+.DS_Store
