@@ -9,6 +9,10 @@ use RuntimeException;
 /**
  * Führt migrations/NNNN_name.sql in Reihenfolge aus und merkt sich angewendete Dateien.
  * Dateien werden nach dem Anwenden nie mehr geändert; Korrekturen kommen als neue Migration.
+ *
+ * MySQL committet DDL implizit, ein Abbruch kann eine Datei halb angewendet hinterlassen. Regel für
+ * Migrationen: mehrere Statements nur replay-sicher (CREATE TABLE IF NOT EXISTS, INSERT IGNORE),
+ * ALTER TABLE und andere nicht wiederholbare Statements in eine eigene Datei mit genau einem Statement.
  */
 final class Migrator
 {

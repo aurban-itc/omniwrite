@@ -1,5 +1,5 @@
 -- Phase 1: Nutzer, Rollen, Pläne, Domains, Nutzungszähler, Audit-Log, Login-Versuche.
-CREATE TABLE plans (
+CREATE TABLE IF NOT EXISTS plans (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(32) NOT NULL,
     name VARCHAR(100) NOT NULL,
@@ -10,13 +10,9 @@ CREATE TABLE plans (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Platzhalter bis die Limits entschieden sind (NULL = unbegrenzt).
-INSERT INTO plans (code, name) VALUES ('default', 'Standard');
+INSERT IGNORE INTO plans (code, name) VALUES ('default', 'Standard');
 
-ALTER TABLE accounts
-    ADD COLUMN plan_id BIGINT UNSIGNED NULL,
-    ADD CONSTRAINT fk_accounts_plan FOREIGN KEY (plan_id) REFERENCES plans (id);
-
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(190) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
@@ -29,7 +25,7 @@ CREATE TABLE users (
     UNIQUE KEY uq_users_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE account_users (
+CREATE TABLE IF NOT EXISTS account_users (
     account_id BIGINT UNSIGNED NOT NULL,
     user_id BIGINT UNSIGNED NOT NULL,
     role ENUM('owner','editor') NOT NULL,
@@ -39,7 +35,7 @@ CREATE TABLE account_users (
     CONSTRAINT fk_au_user FOREIGN KEY (user_id) REFERENCES users (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE domains (
+CREATE TABLE IF NOT EXISTS domains (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     site_id BIGINT UNSIGNED NOT NULL,
     host VARCHAR(190) NOT NULL,
@@ -49,7 +45,7 @@ CREATE TABLE domains (
     CONSTRAINT fk_domains_site FOREIGN KEY (site_id) REFERENCES sites (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE usage_events (
+CREATE TABLE IF NOT EXISTS usage_events (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     site_id BIGINT UNSIGNED NOT NULL,
     kind VARCHAR(32) NOT NULL,
@@ -60,7 +56,7 @@ CREATE TABLE usage_events (
     CONSTRAINT fk_usage_site FOREIGN KEY (site_id) REFERENCES sites (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE audit_log (
+CREATE TABLE IF NOT EXISTS audit_log (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT UNSIGNED NULL,
     account_id BIGINT UNSIGNED NULL,
@@ -72,7 +68,7 @@ CREATE TABLE audit_log (
     KEY idx_audit_account (account_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE login_attempts (
+CREATE TABLE IF NOT EXISTS login_attempts (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(190) NOT NULL,
     ip VARCHAR(45) NOT NULL,
