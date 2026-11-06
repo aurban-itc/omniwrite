@@ -1,8 +1,7 @@
 RewriteEngine On
 
-# Nur HTTPS (Login und Session-Cookie). Hinter einem Proxy zählt X-Forwarded-Proto.
+# Nur HTTPS (Login und Session-Cookie). Bewusst ohne X-Forwarded-Proto: der Header ist vom Client fälschbar.
 RewriteCond %{HTTPS} off
-RewriteCond %{HTTP:X-Forwarded-Proto} !https
 RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:\d+)?$
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 

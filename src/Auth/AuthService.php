@@ -130,7 +130,7 @@ final class AuthService
         $accepted = $user !== null && $user->isActive();
 
         if (!$accepted || $user === null) {
-            $this->audit->log('auth.login_failed', $user?->id, null, ['email' => substr($email, 0, 190)], $ip);
+            $this->audit->log('auth.login_failed', $user?->id, null, ['email' => mb_strcut($email, 0, 190, 'UTF-8')], $ip);
             return null;
         }
         $this->limiter->clear($key);

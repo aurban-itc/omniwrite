@@ -118,4 +118,11 @@ final class AuthServiceTest extends DbTestCase
         $this->expectException(AccessDeniedException::class);
         $auth->attempt($long, 'whatever whatever', '3.3.3.3', $now);
     }
+
+    public function testMultibyteEmailCrossingTheLimitDoesNotBreakAuditLog(): void
+    {
+        $email = str_repeat('a', 189) . 'é@example.com'; // 'é' liegt über der 190-Byte-Grenze
+        self::assertNull($this->auth()->attempt($email, 'whatever whatever', '4.4.4.4'));
+        self::assertSame('1', (string) $this->pdo->query("SELECT COUNT(*) FROM audit_log WHERE action = 'auth.login_failed'")->fetchColumn());
+    }
 }

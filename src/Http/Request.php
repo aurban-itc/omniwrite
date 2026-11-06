@@ -31,7 +31,7 @@ final class Request
     public static function fromGlobals(array &$session): self
     {
         $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-        $https = ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+        $https = ($_SERVER['HTTPS'] ?? '') === 'on'; // X-Forwarded-Proto ist fälschbar und wird nicht beachtet
         return new self(
             strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET'),
             $path,

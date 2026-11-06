@@ -41,7 +41,9 @@ Die Selbstregistrierung steuert `auth.registration` in der Config: `open` (sofor
 SQL-Dateien in `migrations/` als `NNNN_name.sql`. `bin/migrate.php` wendet neue Dateien der Reihe nach an
 (Tabelle `schema_migrations`). Angewendete Dateien werden nicht mehr geändert, Korrekturen kommen als neue Migration.
 MySQL committet DDL sofort. Jede Migration muss deshalb vollständig wiederholbar sein (`CREATE TABLE IF NOT EXISTS`,
-`INSERT IGNORE`); ein nacktes `ALTER TABLE` ist es nicht. Ein Test spielt alle Migrationen gegen MySQL ein zweites Mal ein.
+`INSERT IGNORE`); ein `ALTER TABLE` nur abgesichert über `information_schema` (Beispiel: `0003_plans.sql`).
+Angewendete Dateien werden nie geändert, Anpassungen kommen als neue Migration. Tests gegen MySQL spielen alle
+Migrationen erneut ein und prüfen das Upgrade vom ursprünglichen Phase-0-Stand.
 
 ## Tests und CI
 

@@ -1,24 +1,9 @@
 -- Replay-sicher: nur CREATE TABLE IF NOT EXISTS / INSERT IGNORE, ein Abbruch mitten drin lässt sich neu starten.
--- Basisschema. Noch auf keiner Datenbank angewendet, daher darf es bis zum ersten Einsatz noch wachsen.
-CREATE TABLE IF NOT EXISTS plans (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    code VARCHAR(32) NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    posts_per_month INT UNSIGNED NULL,
-    trial_days INT UNSIGNED NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_plans_code (code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Platzhalter bis die Limits entschieden sind (NULL = unbegrenzt).
-INSERT IGNORE INTO plans (code, name) VALUES ('default', 'Standard');
-
+-- Basisschema (Phase 0). Wird in Phase 1 um users, account_users, domains, plans, usage_events ergänzt.
 CREATE TABLE IF NOT EXISTS accounts (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(190) NOT NULL,
-    plan_id BIGINT UNSIGNED NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_accounts_plan FOREIGN KEY (plan_id) REFERENCES plans (id)
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS sites (

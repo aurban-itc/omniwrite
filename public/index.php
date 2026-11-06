@@ -11,8 +11,7 @@ use OmniWrite\Http\Request;
 try {
     $config = Config::fromFile(getenv('OMNIWRITE_CONFIG') ?: __DIR__ . '/../config/config.php');
     // Secure-Cookie, sobald die konfigurierte Basis-URL https ist (nicht nur, wenn der Request es zeigt).
-    $https = str_starts_with((string) $config->get('app.base_url', ''), 'https://')
-        || ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+    $https = str_starts_with((string) $config->get('app.base_url', ''), 'https://') || ($_SERVER['HTTPS'] ?? '') === 'on';
     session_name('omniwrite');
     session_set_cookie_params(['httponly' => true, 'secure' => $https, 'samesite' => 'Lax', 'path' => '/']);
     session_start();
