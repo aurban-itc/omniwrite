@@ -87,7 +87,6 @@ final class TwoFactorService
         try {
             if (!$this->totp->confirm($user->id, $step, gmdate('Y-m-d H:i:s', $now))) {
                 // Eine parallele Bestätigung war schneller: deren Recovery-Codes bleiben gültig.
-                $this->pdo->rollBack();
                 throw new AccessDeniedException('Keine offene 2FA-Einrichtung');
             }
             $this->totp->replaceRecoveryCodes($user->id, array_map($this->hashCode(...), $codes));

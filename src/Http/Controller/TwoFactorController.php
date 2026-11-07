@@ -45,7 +45,7 @@ final class TwoFactorController
         $r->session->forget('pending_2fa');
         $r->session->regenerate();
         $r->session->set('user_id', $user->id);
-        $r->session->set('mfa', true);
+        $r->session->set('mfa', $user->id);
         return Response::redirect($user->isSuperadmin ? '/admin' : '/dashboard');
     }
 
@@ -69,7 +69,7 @@ final class TwoFactorController
             return Response::redirect($r->user->isSuperadmin ? '/admin' : '/dashboard');
         }
         $r->session->regenerate();
-        $r->session->set('mfa', true); // diese Sitzung hat den Faktor gerade nachgewiesen
+        $r->session->set('mfa', $r->user->id); // diese Sitzung hat den Faktor gerade nachgewiesen
         return $this->view->render($r, 'twofa_codes', ['codes' => $codes]);
     }
 

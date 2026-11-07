@@ -39,6 +39,7 @@ final class AuthController
             return $this->view->render($r, 'login', ['errors' => ['form' => 'err.invalid_credentials'], 'old' => ['email' => $email]], 422);
         }
         $r->session->regenerate();
+        $r->session->forget('mfa'); // Nachweis eines früheren Logins gilt nicht für dieses Konto
         if ($this->twoFactor->isEnabled($user)) {
             // Passwort stimmt, zweiter Faktor fehlt noch: noch keine angemeldete Sitzung.
             $r->session->set('pending_2fa', ['user_id' => $user->id, 'at' => time()]);

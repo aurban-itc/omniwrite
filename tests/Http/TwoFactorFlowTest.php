@@ -102,4 +102,16 @@ final class TwoFactorFlowTest extends KernelTestCase
         $this->loginWithTotp('u@example.com', 'some long password', $secret);
         self::assertSame(200, $this->call('GET', '/account/2fa')->status);
     }
+
+    public function testMfaProofOfOneAccountDoesNotCoverAnother(): void
+    {
+        $a = $this->createUser('a@example.com');
+        $secretA = $this->enableTotp($a);
+        $b = $this->createUser('b@example.com');
+        $this->loginWithTotp('a@example.com', 'some long password', $secretA);
+        // Sitzung wird manuell auf B umgestellt, ohne B's zweiten Faktor
+        $this->sessionData['user_id'] = $b;
+        $this->enableTotp($b);
+        self::assertSame('/login', $this->call('GET', '/dashboard')->headers['Location'] ?? null);
+    }
 }

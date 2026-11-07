@@ -56,20 +56,25 @@ final class Kernel
             $request->session->forget('impersonator_id');
             return;
         }
-        if ($this->twoFactor->isEnabled($user) && $request->session->get('mfa') !== true) {
-            // 2FA ist aktiv, diese Sitzung hat den zweiten Faktor nie bestanden (z. B. vor der Einrichtung
-            // eröffnet): keine gültige Anmeldung.
-            $request->session->forget('user_id');
-            $request->session->forget('impersonator_id');
-            return;
-        }
         $request->user = $user;
 
         $adminId = $request->session->get('impersonator_id');
-        if ($adminId !== null) {
+        if ($adminId === null) {
+            // Wer 2FA aktiv hat, muss den zweiten Faktor in dieser Sitzung für genau dieses Konto bestanden haben.
+            if ($this->twoFactor->isEnabled($user) && $request->session->get('mfa') !== $user->id) {
+                $request->session->forget('user_id');
+                $request->user = null;
+                return;
+            }
+        } else {
             $admin = is_int($adminId) ? $this->users->find($adminId) : null;
             if ($admin === null || !$admin->isActive() || !$admin->isSuperadmin || $user->isSuperadmin) {
                 // Der echte Superadmin ist nicht mehr gültig: Sitzung komplett beenden.
+                $request->session->clear();
+                $request->user = null;
+                return;
+            }
+            if ($this->twoFactor->isEnabled($admin) && $request->session->get('mfa') !== $admin->id) {
                 $request->session->clear();
                 $request->user = null;
                 return;

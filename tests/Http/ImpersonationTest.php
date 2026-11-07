@@ -124,4 +124,12 @@ final class ImpersonationTest extends KernelTestCase
         $this->logout();
         self::assertCount(1, $this->auditRows('admin.impersonate_stop'));
     }
+
+    public function testCanImpersonateCustomerWhoHas2faEnabled(): void
+    {
+        $this->enableTotp($this->customerId);
+        $this->loginAdmin();
+        $this->call('POST', "/admin/impersonate/{$this->customerId}");
+        self::assertSame(200, $this->call('GET', '/dashboard')->status);
+    }
 }
