@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace OmniWrite\Http\Controller;
 
+use OmniWrite\Auth\AuditLogger;
 use OmniWrite\Auth\AuthService;
+use OmniWrite\Auth\TwoFactorService;
 use OmniWrite\Domain\AccessDeniedException;
 use OmniWrite\Domain\ValidationException;
 use OmniWrite\Http\Request;
@@ -12,8 +14,12 @@ use OmniWrite\Http\View;
 
 final class AuthController
 {
-    public function __construct(private readonly AuthService $auth, private readonly View $view)
-    {
+    public function __construct(
+        private readonly AuthService $auth,
+        private readonly View $view,
+        private readonly TwoFactorService $twoFactor,
+        private readonly AuditLogger $audit,
+    ) {
     }
 
     public function loginForm(Request $r): Response
@@ -33,12 +39,21 @@ final class AuthController
             return $this->view->render($r, 'login', ['errors' => ['form' => 'err.invalid_credentials'], 'old' => ['email' => $email]], 422);
         }
         $r->session->regenerate();
+        $r->session->forget('mfa'); // Nachweis eines früheren Logins gilt nicht für dieses Konto
+        if ($this->twoFactor->isEnabled($user)) {
+            // Passwort stimmt, zweiter Faktor fehlt noch: noch keine angemeldete Sitzung.
+            $r->session->set('pending_2fa', ['user_id' => $user->id, 'at' => time()]);
+            return Response::redirect('/login/2fa');
+        }
         $r->session->set('user_id', $user->id);
         return Response::redirect($user->isSuperadmin ? '/admin' : '/dashboard');
     }
 
     public function logout(Request $r): Response
     {
+        if ($r->impersonator !== null && $r->user !== null) {
+            $this->audit->log('admin.impersonate_stop', $r->impersonator->id, null, ['target_user_id' => $r->user->id, 'via' => 'logout'], $r->ip);
+        }
         $r->session->clear();
         return Response::redirect('/login');
     }

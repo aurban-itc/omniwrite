@@ -66,5 +66,6 @@ Migrationen, bei neuen Migrationen mitpflegen) und in der CI zusätzlich gegen M
 ## Status
 
 Phase 1 (Kern und Mandanten): Registrierung, Login, Rollen (Owner, Editor, Superadmin), Sites anlegen, Superadmin-Bereich.
-Noch offen in dieser Phase: 2FA (TOTP) für den Superadmin, Impersonation, Passwort-Reset (braucht den Mailversand aus Phase 4).
+2FA (TOTP, Pflicht für Superadmins, optional für alle; Recovery-Codes) und Impersonation für den Support (mit Banner und Audit-Log).
+Braucht `security.master_key` in der Config. Noch offen: Passwort-Reset (braucht den Mailversand aus Phase 4).
 Weiter mit Phase 2 (Extraktion), siehe Architektur-Dokument.
