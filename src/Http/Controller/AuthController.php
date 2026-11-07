@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace OmniWrite\Http\Controller;
 
+use OmniWrite\Auth\AuditLogger;
 use OmniWrite\Auth\AuthService;
 use OmniWrite\Auth\TwoFactorService;
 use OmniWrite\Domain\AccessDeniedException;
@@ -17,6 +18,7 @@ final class AuthController
         private readonly AuthService $auth,
         private readonly View $view,
         private readonly TwoFactorService $twoFactor,
+        private readonly AuditLogger $audit,
     ) {
     }
 
@@ -48,6 +50,9 @@ final class AuthController
 
     public function logout(Request $r): Response
     {
+        if ($r->impersonator !== null && $r->user !== null) {
+            $this->audit->log('admin.impersonate_stop', $r->impersonator->id, null, ['target_user_id' => $r->user->id, 'via' => 'logout'], $r->ip);
+        }
         $r->session->clear();
         return Response::redirect('/login');
     }

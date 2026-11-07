@@ -23,6 +23,7 @@ button.link{background:none;border:0;padding:0;margin:0;color:#0645ad;text-decor
     <a href="/dashboard"><?= $e($t('nav.dashboard')) ?></a>
     <?php if ($user->isSuperadmin): ?><a href="/admin"><?= $e($t('nav.admin')) ?></a><?php endif; ?>
     <span class="grow"></span>
+    <a href="/account/2fa"><?= $e($t('nav.security')) ?></a>
     <span><?= $e($user->name) ?></span>
     <form method="post" action="/logout"><input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button class="link"><?= $e($t('nav.logout')) ?></button></form>
   <?php else: ?>

@@ -49,4 +49,7 @@ return [
     'imp.start' => 'Sign in as user',
     'imp.stop' => 'Stop',
     'imp.banner' => 'Support mode: you are viewing OmniWrite as {name}.',
+    'nav.security' => 'Security (2FA)',
+    '2fa.status_title' => 'Two-factor authentication',
+    '2fa.status_on' => 'Two-factor authentication is set up.',
 ];

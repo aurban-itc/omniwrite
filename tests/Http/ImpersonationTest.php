@@ -116,4 +116,12 @@ final class ImpersonationTest extends KernelTestCase
         self::assertArrayNotHasKey('user_id', $this->sessionData);
         self::assertArrayNotHasKey('impersonator_id', $this->sessionData);
     }
+
+    public function testLogoutWhileImpersonatingIsAudited(): void
+    {
+        $this->loginAdmin();
+        $this->call('POST', "/admin/impersonate/{$this->customerId}");
+        $this->logout();
+        self::assertCount(1, $this->auditRows('admin.impersonate_stop'));
+    }
 }

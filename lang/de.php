@@ -50,4 +50,7 @@ return [
     'imp.start' => 'Als Nutzer anmelden',
     'imp.stop' => 'Beenden',
     'imp.banner' => 'Support-Modus: Sie sehen OmniWrite als {name}.',
+    'nav.security' => 'Sicherheit (2FA)',
+    '2fa.status_title' => 'Zwei-Faktor-Authentifizierung',
+    '2fa.status_on' => 'Die Zwei-Faktor-Authentifizierung ist eingerichtet.',
 ];

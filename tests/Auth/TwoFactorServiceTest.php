@@ -118,4 +118,18 @@ final class TwoFactorServiceTest extends DbTestCase
         self::assertTrue($this->service->isRequired($this->user));
         self::assertFalse($this->service->isRequired($normal));
     }
+
+    public function testSecondConfirmDoesNotReplaceRecoveryCodes(): void
+    {
+        $secret = $this->service->beginSetup($this->user)['secret'];
+        $this->service->confirmSetup($this->user, Totp::code($secret, $this->step()), self::NOW);
+        $before = $this->pdo->query('SELECT code_hash FROM recovery_codes ORDER BY id')->fetchAll(\PDO::FETCH_COLUMN);
+        try {
+            $this->service->confirmSetup($this->user, Totp::code($secret, $this->step(1)), self::NOW + 30);
+            self::fail('Zweite Bestätigung hätte scheitern müssen');
+        } catch (AccessDeniedException) {
+        }
+        $after = $this->pdo->query('SELECT code_hash FROM recovery_codes ORDER BY id')->fetchAll(\PDO::FETCH_COLUMN);
+        self::assertSame($before, $after);
+    }
 }

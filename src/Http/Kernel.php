@@ -56,6 +56,13 @@ final class Kernel
             $request->session->forget('impersonator_id');
             return;
         }
+        if ($this->twoFactor->isEnabled($user) && $request->session->get('mfa') !== true) {
+            // 2FA ist aktiv, diese Sitzung hat den zweiten Faktor nie bestanden (z. B. vor der Einrichtung
+            // eröffnet): keine gültige Anmeldung.
+            $request->session->forget('user_id');
+            $request->session->forget('impersonator_id');
+            return;
+        }
         $request->user = $user;
 
         $adminId = $request->session->get('impersonator_id');

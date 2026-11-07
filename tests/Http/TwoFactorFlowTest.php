@@ -83,4 +83,23 @@ final class TwoFactorFlowTest extends KernelTestCase
         }
         self::assertSame(429, $this->call('POST', '/login/2fa', ['code' => '111111'])->status);
     }
+
+    public function testSessionWithoutPassedSecondFactorIsNotLoggedIn(): void
+    {
+        $id = $this->createUser('root@example.com', 'root password long', true);
+        $this->enableTotp($id);
+        // Sitzung aus der Zeit vor der 2FA-Aktivierung: user_id gesetzt, aber kein 'mfa'
+        $this->sessionData['user_id'] = $id;
+        $res = $this->call('GET', '/admin');
+        self::assertSame('/login', $res->headers['Location'] ?? null);
+        self::assertArrayNotHasKey('user_id', $this->sessionData);
+    }
+
+    public function testStatusPageShownWhen2faEnabled(): void
+    {
+        $id = $this->createUser('u@example.com');
+        $secret = $this->enableTotp($id);
+        $this->loginWithTotp('u@example.com', 'some long password', $secret);
+        self::assertSame(200, $this->call('GET', '/account/2fa')->status);
+    }
 }

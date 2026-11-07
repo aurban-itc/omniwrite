@@ -31,7 +31,7 @@ use PDO;
 /** Composition Root: verdrahtet Repositories, Services, Controller und Routen. */
 final class App
 {
-    public static function buildAuth(PDO $pdo, Config $config): AuthService
+    public static function buildAuth(PDO $pdo, Config $config, ?AuditLogger $audit = null): AuthService
     {
         return new AuthService(
             $pdo,
@@ -39,7 +39,7 @@ final class App
             new AccountRepository($pdo),
             new PasswordHasher(),
             new RateLimiter($pdo),
-            new AuditLogger($pdo),
+            $audit ?? new AuditLogger($pdo),
             (string) $config->get('auth.registration', 'closed'),
         );
     }
@@ -52,7 +52,7 @@ final class App
         $audit = new AuditLogger($pdo);
         $csrf = new Csrf();
         $view = new View($root . '/templates', new Translator($root . '/lang'), $csrf);
-        $auth = self::buildAuth($pdo, $config);
+        $auth = self::buildAuth($pdo, $config, $audit);
         $sites = new SiteService(new SiteRepository($pdo), $accounts, $audit);
 
         $twoFactor = new TwoFactorService(
@@ -63,7 +63,7 @@ final class App
             $audit,
         );
 
-        $authC = new AuthController($auth, $view, $twoFactor);
+        $authC = new AuthController($auth, $view, $twoFactor, $audit);
         $tfaC = new TwoFactorController($view, $twoFactor, $users);
         $impC = new ImpersonationController($users, $audit);
         $dash = new DashboardController($view, $accounts, $sites);

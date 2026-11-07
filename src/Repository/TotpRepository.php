@@ -37,10 +37,14 @@ final class TotpRepository
         return true;
     }
 
-    public function confirm(int $userId, int $step, string $when): void
+    /** Beansprucht die offene Einrichtung atomar: nur der erste Aufruf gewinnt (true). */
+    public function confirm(int $userId, int $step, string $when): bool
     {
-        $this->pdo->prepare('UPDATE user_totp SET confirmed_at = ?, last_step = ? WHERE user_id = ?')
-            ->execute([$when, $step, $userId]);
+        $stmt = $this->pdo->prepare(
+            'UPDATE user_totp SET confirmed_at = ?, last_step = ? WHERE user_id = ? AND confirmed_at IS NULL'
+        );
+        $stmt->execute([$when, $step, $userId]);
+        return $stmt->rowCount() > 0;
     }
 
     /** Atomar: nur wenn der Schritt neuer ist als der zuletzt benutzte (Replay-Schutz). */
