@@ -24,6 +24,14 @@ class SiteRepository
         return $stmt->fetchAll();
     }
 
+    /** @return array<string, mixed>|null */
+    public function findBySlug(string $slug): ?array
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM sites WHERE slug = ?');
+        $stmt->execute([$slug]);
+        return $stmt->fetch() ?: null;
+    }
+
     public function slugExists(string $slug): bool
     {
         $stmt = $this->pdo->prepare('SELECT 1 FROM sites WHERE slug = ?');
