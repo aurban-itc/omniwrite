@@ -132,4 +132,14 @@ final class ImpersonationTest extends KernelTestCase
         $this->call('POST', "/admin/impersonate/{$this->customerId}");
         self::assertSame(200, $this->call('GET', '/dashboard')->status);
     }
+
+    public function testTwoFactorSetupIsClosedWhileImpersonating(): void
+    {
+        $this->loginAdmin();
+        $this->call('POST', "/admin/impersonate/{$this->customerId}");
+        self::assertSame('/dashboard', $this->call('GET', '/account/2fa')->headers['Location'] ?? null);
+        $this->call('POST', '/account/2fa', ['code' => '123456']);
+        self::assertSame(200, $this->call('GET', '/dashboard')->status);
+        self::assertSame(0, (int) $this->pdo->query('SELECT COUNT(*) FROM user_totp WHERE user_id = ' . $this->customerId)->fetchColumn());
+    }
 }

@@ -51,6 +51,9 @@ final class TwoFactorController
 
     public function setupForm(Request $r): Response
     {
+        if ($r->impersonator !== null) {
+            return Response::redirect('/dashboard'); // Sicherheitseinstellungen gehören dem Kunden
+        }
         try {
             $info = $this->twoFactor->setupInfo($r->user);
         } catch (AccessDeniedException) {
@@ -61,6 +64,9 @@ final class TwoFactorController
 
     public function setupConfirm(Request $r): Response
     {
+        if ($r->impersonator !== null) {
+            return Response::redirect('/dashboard'); // Admin darf keinen eigenen Faktor am Kundenkonto hinterlegen
+        }
         try {
             $codes = $this->twoFactor->confirmSetup($r->user, $r->input('code'), time(), $r->ip);
         } catch (ValidationException $e) {
