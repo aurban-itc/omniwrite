@@ -47,7 +47,12 @@ abstract class KernelTestCase extends DbTestCase
         if ($method === 'POST' && $csrf) {
             $post['_csrf'] = $this->token();
         }
-        return $this->kernel->handle(new Request($method, $path, [], $post, $session, '9.9.9.9'));
+        $query = [];
+        if (str_contains($path, '?')) {
+            [$path, $qs] = explode('?', $path, 2);
+            parse_str($qs, $query);
+        }
+        return $this->kernel->handle(new Request($method, $path, $query, $post, $session, '9.9.9.9'));
     }
 
     protected function token(): string

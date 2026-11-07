@@ -13,4 +13,16 @@ enum Role: string
     {
         return $this === self::Owner;
     }
+
+    /** Beiträge und Themen schreiben. */
+    public function canWriteContent(): bool
+    {
+        return true;
+    }
+
+    /** Veröffentlichen, ablehnen, löschen und Site-Einstellungen: nur Owner (Veröffentlichung ist immer eine bewusste Freigabe). */
+    public function canPublish(): bool
+    {
+        return $this === self::Owner;
+    }
 }

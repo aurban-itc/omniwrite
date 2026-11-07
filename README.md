@@ -67,5 +67,7 @@ Migrationen, bei neuen Migrationen mitpflegen) und in der CI zusätzlich gegen M
 
 Phase 1 (Kern und Mandanten): Registrierung, Login, Rollen (Owner, Editor, Superadmin), Sites anlegen, Superadmin-Bereich.
 2FA (TOTP, Pflicht für Superadmins, optional für alle; Recovery-Codes) und Impersonation für den Support (mit Banner und Audit-Log).
+
+Phase 2 (Blog-Kern, aus Coastal portiert): pro Site Beiträge (Editor, Entwurf → Prüfung → veröffentlicht/abgelehnt), Themenliste mit Rotation (oben nach unten, dann von vorn) und Einstellungen (Stilrichtlinie, Firmenfakten, Bildstil; Standardtexte DE/EN). Unter `/sites/<kürzel>/posts|topics|settings`. Rechte: Owner und Superadmin dürfen veröffentlichen, ablehnen, löschen und Einstellungen ändern; Editor schreibt Entwürfe, bearbeitet Themen und reicht zur Prüfung ein. Fremde Sites antworten mit 404. KI-Texte und Bilder folgen in Phase 3, Veröffentlichung nach außen (Hosted-Seiten, Feed, Push) in den Phasen 5 bis 7; bis dahin ändert "veröffentlicht" nur den Status.
 Braucht `security.master_key` in der Config. Noch offen: Passwort-Reset (braucht den Mailversand aus Phase 4).
 Weiter mit Phase 2 (Extraktion), siehe Architektur-Dokument.
