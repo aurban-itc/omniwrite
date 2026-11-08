@@ -206,4 +206,26 @@ final class PostServiceTest extends DbTestCase
         $this->posts->save($s, $u, $id, ['title' => 'Live', 'body_html' => '<p>neu</p>']);
         self::assertStringContainsString('neu', (string) $this->posts->get($s, $id)['body_html']);
     }
+
+    public function testConditionalUpdateNeverTouchesPublishedPost(): void
+    {
+        [$u, $s] = $this->owner();
+        $id = $this->posts->save($s, $u, 0, ['title' => 'Live', 'body_html' => '<p>freigegeben</p>']);
+        $this->posts->transition($s, $u, $id, 'publish');
+        $repo = new \OmniWrite\Repository\PostRepository($this->pdo, $s->context);
+        self::assertFalse($repo->updateUnlessPublished($id, ['body_html' => '<p>überschrieben</p>']));
+        self::assertStringContainsString('freigegeben', (string) $repo->find($id)['body_html']);
+    }
+
+    public function testEditorCanResaveUnchangedDraftWithinTheSameSecond(): void
+    {
+        [$acc] = $this->fx->accountWithSite('alpha');
+        $editor = $this->fx->user('e@example.com');
+        $this->fx->member($acc, $editor, Role::Editor);
+        $es = $this->fx->resolve($editor, 'alpha');
+        $id = $this->posts->save($es, $editor, 0, ['title' => 'T', 'body_html' => '<p>a</p>']);
+        $this->posts->save($es, $editor, $id, ['title' => 'T', 'body_html' => '<p>a</p>']);
+        $this->posts->save($es, $editor, $id, ['title' => 'T', 'body_html' => '<p>a</p>']);
+        self::assertSame('T', $this->posts->get($es, $id)['title']);
+    }
 }

@@ -111,8 +111,12 @@ final class PostService
             try {
                 if ($existing === null) {
                     $id = $repo->insert($data + ['status' => 'draft']);
-                } else {
+                } elseif ($s->canPublish()) {
                     $repo->update($id, $data);
+                } elseif (!$repo->updateUnlessPublished($id, $data) && ($repo->find($id)['status'] ?? 'published') === 'published') {
+                    // (rowCount 0 allein genügt nicht: MySQL zählt unveränderte Zeilen nicht mit)
+                    // Zwischen Prüfung und Schreiben veröffentlicht (oder gelöscht): nichts überschreiben.
+                    throw new AccessDeniedException('Veröffentlichte Beiträge dürfen nur Owner ändern');
                 }
                 break;
             } catch (PDOException $e) {

@@ -40,6 +40,25 @@ final class PostRepository extends SiteScopedRepository
         return $stmt->fetchAll();
     }
 
+    /** Wie update(), ändert aber nie einen veröffentlichten Beitrag (atomar, ohne Lücke zwischen Prüfen und Schreiben). */
+    public function updateUnlessPublished(int $id, array $data): bool
+    {
+        $data = array_intersect_key($data, array_flip($this->columns()));
+        if ($data === []) {
+            return false;
+        }
+        $sets = array_map(static fn (string $c): string => "$c = :set_$c", array_keys($data));
+        $params = ['id' => $id, 'site_id' => $this->site->siteId];
+        foreach ($data as $col => $value) {
+            $params["set_$col"] = $value;
+        }
+        $stmt = $this->pdo->prepare(
+            'UPDATE posts SET ' . implode(', ', $sets) . ' WHERE ' . $this->scopedWhere("id = :id AND status <> 'published'")
+        );
+        $stmt->execute($params);
+        return $stmt->rowCount() > 0;
+    }
+
     public function slugTaken(string $slug, int $exceptId = 0): bool
     {
         $stmt = $this->pdo->prepare('SELECT 1 FROM posts WHERE ' . $this->scopedWhere('slug = :slug AND id <> :id'));
