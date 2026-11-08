@@ -14,6 +14,13 @@ button{margin-top:1rem;padding:.55rem 1.1rem;font:inherit;cursor:pointer}
 .err{color:#b00020;margin:.2rem 0}.card{border:1px solid #d8dde3;border-radius:6px;padding:1rem;margin:1rem 0}
 button.link{background:none;border:0;padding:0;margin:0;color:#0645ad;text-decoration:underline}
 @media (prefers-color-scheme:dark){body{background:#14171a;color:#e6e8ea}nav,.card{border-color:#333}input,select{background:#1d2126;color:inherit;border:1px solid #444}button.link{color:#8ab4f8}.err{color:#ff8a80}}
+textarea{width:100%;padding:.5rem;font:inherit;box-sizing:border-box}
+.ok{color:#1b6e2d}.pill{display:inline-block;padding:0 .5rem;border-radius:1rem;background:#e8ecf0;font-size:.8rem}
+.pill.published{background:#cdeed6}.pill.in_review{background:#fff0c2}.pill.declined{background:#f8d0d0}
+.toolbar{display:flex;flex-wrap:wrap;gap:.25rem}.toolbar button{margin:0;padding:.25rem .55rem}
+.area{min-height:16rem;border:1px solid #c3c9d0;border-radius:4px;padding:.75rem;margin-top:.4rem}
+.area[hidden]{display:none}.actions{margin:1rem 0}
+@media (prefers-color-scheme:dark){textarea{background:#1d2126;color:inherit;border:1px solid #444}.ok{color:#7ddf94}.pill{background:#2a3036}.area{border-color:#444}}
 </style>
 </head>
 <body>
@@ -40,5 +47,6 @@ button.link{background:none;border:0;padding:0;margin:0;color:#0645ad;text-decor
 </div>
 <?php endif; ?>
 <main><?= $content ?></main>
+<script src="/assets/app.js" defer></script>
 </body>
 </html>

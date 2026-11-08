@@ -2,7 +2,10 @@
 <p><?= $e($account['name']) ?></p>
 <?php if ($sites === []): ?><p><?= $e($t('dashboard.no_sites')) ?></p><?php endif; ?>
 <?php foreach ($sites as $site): ?>
-  <div class="card"><strong><?= $e($site['name']) ?></strong> <small>/b/<?= $e($site['slug']) ?>/ · <?= $e($site['locale']) ?> · <?= $e($site['timezone']) ?></small></div>
+  <div class="card"><strong><?= $e($site['name']) ?></strong> <small>/b/<?= $e($site['slug']) ?>/ · <?= $e($site['locale']) ?> · <?= $e($site['timezone']) ?></small><br>
+    <a href="/sites/<?= $e($site['slug']) ?>/posts"><?= $e($t('site.posts')) ?></a> ·
+    <a href="/sites/<?= $e($site['slug']) ?>/topics"><?= $e($t('site.topics')) ?></a> ·
+    <a href="/sites/<?= $e($site['slug']) ?>/settings"><?= $e($t('site.settings')) ?></a></div>
 <?php endforeach; ?>
 <?php if ($canManage): ?>
 <h2><?= $e($t('dashboard.new_site')) ?></h2>
