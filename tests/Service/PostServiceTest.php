@@ -81,7 +81,7 @@ final class PostServiceTest extends DbTestCase
         [$u1, $s1] = $this->owner('o1@example.com', 'alpha');
         [$u2, $s2] = $this->owner('o2@example.com', 'beta');
         $id = $this->posts->save($s1, $u1, 0, ['title' => 'Geheim', 'body_html' => '<p>a</p>']);
-        self::assertSame([], $this->posts->list($s2));
+        self::assertSame([], $this->posts->list($s2)['items']);
         foreach ([
             fn () => $this->posts->get($s2, $id),
             fn () => $this->posts->save($s2, $u2, $id, ['title' => 'Hijack', 'body_html' => '<p>x</p>']),
@@ -170,5 +170,21 @@ final class PostServiceTest extends DbTestCase
         $this->posts->transition($s, $u, $id, 'publish');
         $actions = $this->pdo->query("SELECT action FROM audit_log WHERE action LIKE 'post.%' ORDER BY id")->fetchAll(\PDO::FETCH_COLUMN);
         self::assertSame(['post.create', 'post.publish'], $actions);
+    }
+
+    public function testListIsPaginatedNewestFirst(): void
+    {
+        [$u, $s] = $this->owner();
+        for ($i = 1; $i <= PostService::PAGE_SIZE + 3; $i++) {
+            $this->posts->save($s, $u, 0, ['title' => "Post $i", 'body_html' => '<p>x</p>']);
+        }
+        $first = $this->posts->list($s);
+        self::assertCount(PostService::PAGE_SIZE, $first['items']);
+        self::assertTrue($first['has_more']);
+        self::assertSame('Post 28', $first['items'][0]['title']);
+        $second = $this->posts->list($s, null, 2);
+        self::assertSame(['Post 3', 'Post 2', 'Post 1'], array_column($second['items'], 'title'));
+        self::assertFalse($second['has_more']);
+        self::assertSame(1, $this->posts->list($s, null, -5)['page']);
     }
 }

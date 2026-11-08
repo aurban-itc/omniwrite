@@ -18,7 +18,8 @@ use PDO;
  */
 final class TopicService
 {
-    public const CURSOR_KEY = 'topic_cursor';
+    public const CURSOR_KEY = 'topic_cursor';        // sort_order des zuletzt benutzten Themas (bleibt gültig, wenn es gelöscht wird)
+    public const CURSOR_ID_KEY = 'topic_cursor_id';  // dessen ID: folgt dem Thema, wenn die Liste umsortiert wird
 
     public function __construct(private readonly PDO $pdo, private readonly AuditLogger $audit)
     {
@@ -59,11 +60,12 @@ final class TopicService
     }
 
     /** @param 'pause'|'resume'|'accept' $action */
-    public function setStatus(ResolvedSite $s, int $id, string $action): void
+    public function setStatus(ResolvedSite $s, User $actor, int $id, string $action, ?string $ip = null): void
     {
         $this->requireWrite($s);
         $this->get($s, $id);
         $this->repo($s)->update($id, ['status' => $action === 'pause' ? 'paused' : 'active']);
+        $this->audit->log('topic.' . $action, $actor->id, $s->accountId(), ['site_id' => $s->id(), 'topic_id' => $id], $ip);
     }
 
     public function delete(ResolvedSite $s, User $actor, int $id, ?string $ip = null): void
@@ -75,7 +77,7 @@ final class TopicService
     }
 
     /** Tauscht die Position mit dem Nachbarn. $dir: -1 nach oben, +1 nach unten. */
-    public function move(ResolvedSite $s, int $id, int $dir): void
+    public function move(ResolvedSite $s, User $actor, int $id, int $dir, ?string $ip = null): void
     {
         $this->requireWrite($s);
         $topic = $this->get($s, $id);
@@ -93,13 +95,19 @@ final class TopicService
             $this->pdo->rollBack();
             throw $e;
         }
+        $this->audit->log('topic.move', $actor->id, $s->accountId(), ['site_id' => $s->id(), 'topic_id' => $id, 'dir' => $dir < 0 ? -1 : 1], $ip);
     }
 
     /** Das Thema, das die Rotation als Nächstes nimmt (null, wenn kein Thema aktiv ist). @return array<string, mixed>|null */
     public function nextFor(ResolvedSite $s): ?array
     {
         $repo = $this->repo($s);
-        $cursor = (int) $this->settings($s)->get(self::CURSOR_KEY, '0');
+        $settings = $this->settings($s);
+        $cursor = (int) $settings->get(self::CURSOR_KEY, '0');
+        $lastId = (int) $settings->get(self::CURSOR_ID_KEY, '0');
+        if ($lastId > 0 && ($last = $repo->find($lastId)) !== null) {
+            $cursor = (int) $last['sort_order']; // Position nach einem Umsortieren, nicht der gespeicherte Wert
+        }
         return $repo->nextActiveAfter($cursor) ?? $repo->firstActive();
     }
 
@@ -110,6 +118,7 @@ final class TopicService
         $this->repo($s)->update($id, ['times_used' => (int) $topic['times_used'] + 1, 'last_used_at' => gmdate('Y-m-d H:i:s')]);
         if ($advance) {
             $this->settings($s)->set(self::CURSOR_KEY, (string) (int) $topic['sort_order']);
+            $this->settings($s)->set(self::CURSOR_ID_KEY, (string) $id);
         }
     }
 

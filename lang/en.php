@@ -81,4 +81,5 @@ return [
     'err.cover_invalid' => 'Please enter an https address or a relative path.',
     'err.status_transition' => 'This status change is not possible.', 'err.delete_published' => 'Unpublish published posts first.',
     'err.too_long' => 'The text is too long (8000 characters at most).',
+    'page.newer' => 'Newer', 'page.older' => 'Older',
 ];

@@ -82,4 +82,5 @@ return [
     'err.cover_invalid' => 'Bitte eine https-Adresse oder einen relativen Pfad angeben.',
     'err.status_transition' => 'Dieser Statuswechsel ist nicht möglich.', 'err.delete_published' => 'Veröffentlichte Beiträge zuerst zurückziehen.',
     'err.too_long' => 'Der Text ist zu lang (höchstens 8000 Zeichen).',
+    'page.newer' => 'Neuere', 'page.older' => 'Ältere',
 ];

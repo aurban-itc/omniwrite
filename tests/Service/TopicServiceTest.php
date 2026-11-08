@@ -57,9 +57,9 @@ final class TopicServiceTest extends DbTestCase
         self::assertNull($this->topics->nextFor($s));
         $a = $this->topics->add($s, $u, ['title' => 'A']);
         $this->topics->add($s, $u, ['title' => 'S'], 'suggested');
-        $this->topics->setStatus($s, $a, 'pause');
+        $this->topics->setStatus($s, $u, $a, 'pause');
         self::assertNull($this->topics->nextFor($s));
-        $this->topics->setStatus($s, $a, 'resume');
+        $this->topics->setStatus($s, $u, $a, 'resume');
         self::assertSame('A', $this->topics->nextFor($s)['title']);
     }
 
@@ -77,8 +77,8 @@ final class TopicServiceTest extends DbTestCase
         [$u, $s] = $this->owner();
         $a = $this->topics->add($s, $u, ['title' => 'A']);
         $b = $this->topics->add($s, $u, ['title' => 'B']);
-        $this->topics->move($s, $b, -1);
-        $this->topics->move($s, $b, -1); // schon oben: nichts passiert
+        $this->topics->move($s, $u, $b, -1);
+        $this->topics->move($s, $u, $b, -1); // schon oben: nichts passiert
         $titles = array_column($this->topics->overview($s)['rotation'], 'title');
         self::assertSame(['B', 'A'], $titles);
         self::assertNotNull($a);
@@ -95,8 +95,8 @@ final class TopicServiceTest extends DbTestCase
             fn () => $this->topics->get($s2, $id),
             fn () => $this->topics->update($s2, $u2, $id, ['title' => 'x']),
             fn () => $this->topics->delete($s2, $u2, $id),
-            fn () => $this->topics->move($s2, $id, 1),
-            fn () => $this->topics->setStatus($s2, $id, 'pause'),
+            fn () => $this->topics->move($s2, $u2, $id, 1),
+            fn () => $this->topics->setStatus($s2, $u2, $id, 'pause'),
         ] as $attempt) {
             try {
                 $attempt();
@@ -160,5 +160,37 @@ final class TopicServiceTest extends DbTestCase
         $this->fx->member($acc, $editor, Role::Editor);
         $this->expectException(AccessDeniedException::class);
         $svc->save($this->fx->resolve($editor, 'delta'), $editor, ['style_guide' => 'x']);
+    }
+
+    public function testReorderingAfterUseDoesNotRepeatTheUsedTopic(): void
+    {
+        [$u, $s] = $this->owner();
+        $a = $this->topics->add($s, $u, ['title' => 'A']);
+        $b = $this->topics->add($s, $u, ['title' => 'B']);
+        $this->topics->markUsed($s, $a, true);
+        $this->topics->move($s, $u, $b, -1); // B steht jetzt vor A
+        self::assertSame('B', $this->topics->nextFor($s)['title']);
+    }
+
+    public function testDeletingTheLastUsedTopicKeepsTheRotationPosition(): void
+    {
+        [$u, $s] = $this->owner();
+        $this->topics->add($s, $u, ['title' => 'A']);
+        $b = $this->topics->add($s, $u, ['title' => 'B']);
+        $this->topics->add($s, $u, ['title' => 'C']);
+        $this->topics->markUsed($s, $b, true);
+        $this->topics->delete($s, $u, $b);
+        self::assertSame('C', $this->topics->nextFor($s)['title']);
+    }
+
+    public function testStatusChangesAndMovesAreAudited(): void
+    {
+        [$u, $s] = $this->owner();
+        $a = $this->topics->add($s, $u, ['title' => 'A']);
+        $b = $this->topics->add($s, $u, ['title' => 'B']);
+        $this->topics->setStatus($s, $u, $a, 'pause');
+        $this->topics->move($s, $u, $b, -1);
+        $actions = $this->pdo->query("SELECT action FROM audit_log WHERE action IN ('topic.pause','topic.move')")->fetchAll(\PDO::FETCH_COLUMN);
+        self::assertSame(['topic.pause', 'topic.move'], $actions);
     }
 }

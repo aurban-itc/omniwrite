@@ -64,11 +64,11 @@ final class TopicController extends SiteController
         return $this->withSite($r, function (ResolvedSite $s) use ($r): Response {
             $id = $this->id($r);
             match ((string) ($r->params['action'] ?? '')) {
-                'up' => $this->topics->move($s, $id, -1),
-                'down' => $this->topics->move($s, $id, 1),
-                'pause' => $this->topics->setStatus($s, $id, 'pause'),
-                'resume' => $this->topics->setStatus($s, $id, 'resume'),
-                'accept' => $this->topics->setStatus($s, $id, 'accept'),
+                'up' => $this->topics->move($s, $r->user, $id, -1, $r->ip),
+                'down' => $this->topics->move($s, $r->user, $id, 1, $r->ip),
+                'pause' => $this->topics->setStatus($s, $r->user, $id, 'pause', $r->ip),
+                'resume' => $this->topics->setStatus($s, $r->user, $id, 'resume', $r->ip),
+                'accept' => $this->topics->setStatus($s, $r->user, $id, 'accept', $r->ip),
                 'delete', 'dismiss' => $this->topics->delete($s, $r->user, $id, $r->ip),
                 default => null,
             };

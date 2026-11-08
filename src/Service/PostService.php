@@ -29,10 +29,18 @@ final class PostService
     {
     }
 
-    /** @return list<array<string, mixed>> */
-    public function list(ResolvedSite $s, ?string $status = null): array
+    public const PAGE_SIZE = 25;
+
+    /** @return array{items: list<array<string, mixed>>, has_more: bool, page: int} Seite ab 1, neueste zuerst. */
+    public function list(ResolvedSite $s, ?string $status = null, int $page = 1): array
     {
-        return $this->repo($s)->listSummaries($status !== null && in_array($status, PostRepository::STATUSES, true) ? $status : null);
+        $page = max(1, $page);
+        $rows = $this->repo($s)->listSummaries(
+            $status !== null && in_array($status, PostRepository::STATUSES, true) ? $status : null,
+            self::PAGE_SIZE + 1,
+            ($page - 1) * self::PAGE_SIZE,
+        );
+        return ['items' => array_slice($rows, 0, self::PAGE_SIZE), 'has_more' => count($rows) > self::PAGE_SIZE, 'page' => $page];
     }
 
     /** @return array<string, mixed> */

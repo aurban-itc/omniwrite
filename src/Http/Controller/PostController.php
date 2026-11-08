@@ -25,7 +25,8 @@ final class PostController extends SiteController
         return $this->withSite($r, function (ResolvedSite $s) use ($r): Response {
             $status = isset($r->query['status']) && is_string($r->query['status']) ? $r->query['status'] : null;
             return $this->view->render($r, 'posts_list', [
-                'rs' => $s, 'site' => $s->site, 'posts' => $this->posts->list($s, $status), 'filter' => $status,
+                'rs' => $s, 'site' => $s->site, 'filter' => $status, 'paging' => $paging = $this->posts->list($s, $status, (int) ($r->query['page'] ?? 1)),
+                'posts' => $paging['items'],
                 'notice' => $this->notice($r),
             ]);
         });

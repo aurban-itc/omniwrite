@@ -16,3 +16,8 @@
     <?= !empty($p['published_at']) ? ' · ' . $e(substr((string) $p['published_at'], 0, 10)) : '' ?></small>
   </div>
 <?php endforeach; ?>
+<?php
+$q = static fn (int $page): string => '?' . http_build_query(array_filter(['status' => $filter, 'page' => $page > 1 ? $page : null]));
+?>
+<?php if ($paging['page'] > 1): ?><a href="<?= $e($base) ?>/posts<?= $e($q($paging['page'] - 1)) ?>">← <?= $e($t('page.newer')) ?></a><?php endif; ?>
+<?php if ($paging['has_more']): ?> <a href="<?= $e($base) ?>/posts<?= $e($q($paging['page'] + 1)) ?>"><?= $e($t('page.older')) ?> →</a><?php endif; ?>
