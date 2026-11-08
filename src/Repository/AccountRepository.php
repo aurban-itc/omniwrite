@@ -61,4 +61,15 @@ final class AccountRepository
             $rows
         );
     }
+
+    /** Beiträge pro Monat laut Plan des Accounts; null = unbegrenzt (auch ohne Plan). */
+    public function postsPerMonth(int $accountId): ?int
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT p.posts_per_month FROM accounts a LEFT JOIN plans p ON p.id = a.plan_id WHERE a.id = ?'
+        );
+        $stmt->execute([$accountId]);
+        $value = $stmt->fetchColumn();
+        return $value === false || $value === null ? null : (int) $value;
+    }
 }

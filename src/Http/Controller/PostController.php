@@ -13,7 +13,7 @@ use OmniWrite\Service\SiteAccess;
 
 final class PostController extends SiteController
 {
-    private const FIELDS = ['title', 'slug', 'body_html', 'excerpt', 'category', 'keywords', 'meta_description', 'cover_image', 'cover_alt'];
+    private const FIELDS = ['title', 'slug', 'body_html', 'excerpt', 'category', 'keywords', 'meta_description', 'cover_image', 'cover_alt', 'image_prompt'];
 
     public function __construct(SiteAccess $access, private readonly View $view, private readonly PostService $posts)
     {

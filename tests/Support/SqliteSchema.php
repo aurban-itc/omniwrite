@@ -23,7 +23,7 @@ CREATE TABLE posts (id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER NOT NU
     slug TEXT NOT NULL, body_html TEXT, status TEXT NOT NULL DEFAULT 'draft', created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     excerpt TEXT NOT NULL DEFAULT '', category TEXT NOT NULL DEFAULT '', keywords TEXT NOT NULL DEFAULT '',
     meta_description TEXT NOT NULL DEFAULT '', cover_image TEXT NOT NULL DEFAULT '', cover_alt TEXT NOT NULL DEFAULT '',
-    read_minutes INTEGER NOT NULL DEFAULT 1, topic_id INTEGER NULL, published_at TEXT NULL, updated_at TEXT NULL,
+    image_prompt TEXT NOT NULL DEFAULT '', read_minutes INTEGER NOT NULL DEFAULT 1, topic_id INTEGER NULL, published_at TEXT NULL, updated_at TEXT NULL,
     UNIQUE (site_id, slug));
 CREATE TABLE topics (id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER NOT NULL, title TEXT NOT NULL,
     keywords TEXT NOT NULL DEFAULT '', category TEXT NOT NULL DEFAULT '', notes TEXT NULL,
