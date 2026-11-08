@@ -60,6 +60,10 @@ final class PostService
         $this->requireWrite($s);
         $repo = $this->repo($s);
         $existing = $id > 0 ? ($repo->find($id) ?? throw new NotFoundException('Beitrag nicht gefunden')) : null;
+        if ($existing !== null && $existing['status'] === 'published' && !$s->canPublish()) {
+            // Freigegebene Inhalte ersetzt nur, wer auch veröffentlichen darf.
+            throw new AccessDeniedException('Veröffentlichte Beiträge dürfen nur Owner ändern');
+        }
 
         $title = trim((string) ($in['title'] ?? ''));
         $body = Html::sanitize((string) ($in['body_html'] ?? ''));

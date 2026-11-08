@@ -187,4 +187,23 @@ final class PostServiceTest extends DbTestCase
         self::assertFalse($second['has_more']);
         self::assertSame(1, $this->posts->list($s, null, -5)['page']);
     }
+
+    public function testEditorCannotChangePublishedPost(): void
+    {
+        [$u, $s] = $this->owner();
+        $id = $this->posts->save($s, $u, 0, ['title' => 'Live', 'body_html' => '<p>freigegeben</p>']);
+        $this->posts->transition($s, $u, $id, 'publish');
+        $editor = $this->fx->user('e@example.com');
+        $this->fx->member($s->accountId(), $editor, Role::Editor);
+        $es = $this->fx->resolve($editor, 'alpha');
+        try {
+            $this->posts->save($es, $editor, $id, ['title' => 'Live', 'body_html' => '<p>geändert</p>']);
+            self::fail('Verbot erwartet');
+        } catch (AccessDeniedException) {
+        }
+        self::assertStringContainsString('freigegeben', (string) $this->posts->get($s, $id)['body_html']);
+        // Der Owner darf weiter ändern.
+        $this->posts->save($s, $u, $id, ['title' => 'Live', 'body_html' => '<p>neu</p>']);
+        self::assertStringContainsString('neu', (string) $this->posts->get($s, $id)['body_html']);
+    }
 }

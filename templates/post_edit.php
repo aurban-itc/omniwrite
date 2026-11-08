@@ -12,7 +12,7 @@ $err = static fn (string $k): string => isset($errors[$k]) ? '<p class="err">' .
 <?php if ($queryError): ?><p class="err"><?= $e($t($queryError)) ?></p><?php endif; ?>
 <?php if ($status === 'published'): ?><p><small><?= $e($t('post.live_hint')) ?></small></p><?php endif; ?>
 
-<?php if ($rs->canWrite()): ?>
+<?php if ($rs->canWrite() && ($status !== 'published' || $rs->canPublish())): ?>
 <form method="post" action="<?= $e($base) ?>/posts<?= $id ? '/' . (int) $id : '' ?>" id="post-form">
   <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
   <label for="title"><?= $e($t('post.title')) ?></label>
