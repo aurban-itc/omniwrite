@@ -52,13 +52,15 @@ final class PublicBlogService
         );
     }
 
-    /** @param array<string, mixed> $site @return array{posts: list<array<string, mixed>>, page: int, pages: int} */
-    public function page(array $site, int $page): array
+    /** @param array<string, mixed> $site @return array{posts: list<array<string, mixed>>, page: int, pages: int, total: int} */
+    public function page(array $site, int $page, int $perPage = self::PER_PAGE): array
     {
         $repo = new PostRepository($this->pdo, new SiteContext((int) $site['id']));
-        $pages = max(1, (int) ceil($repo->countPublished() / self::PER_PAGE));
+        $perPage = min(max(1, $perPage), 50);
+        $total = $repo->countPublished();
+        $pages = max(1, (int) ceil($total / $perPage));
         $page = min(max(1, $page), $pages);
-        return ['posts' => $repo->listPublished(self::PER_PAGE, ($page - 1) * self::PER_PAGE), 'page' => $page, 'pages' => $pages];
+        return ['posts' => $repo->listPublished($perPage, ($page - 1) * $perPage), 'page' => $page, 'pages' => $pages, 'total' => $total];
     }
 
     /** @param array<string, mixed> $site @return array<string, mixed>|null */

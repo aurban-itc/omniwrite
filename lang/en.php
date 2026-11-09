@@ -206,4 +206,8 @@ return [
     'post.view_live' => 'View',
     'err.domain_txt' => 'Ownership proof missing: the TXT record is not visible in DNS yet.',
     'domain.txt_help' => 'To prove you own the domain, also create this TXT record:',
+    'api.title' => 'API and embed',
+    'api.help' => 'The API returns published posts as JSON (parameters page and per_page, at most 50). The code below embeds a list of the latest posts on any page (data-limit up to 20, optionally data-excerpt="true" and data-target="#element-id").',
+    'api.url' => 'API address',
+    'api.embed' => 'Embed code',
 ];

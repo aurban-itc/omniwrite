@@ -207,4 +207,8 @@ return [
     'post.view_live' => 'Ansehen',
     'err.domain_txt' => 'Der Inhaber-Nachweis fehlt: Der TXT-Eintrag ist noch nicht im DNS zu sehen.',
     'domain.txt_help' => 'Zum Nachweis, dass die Domain Ihnen gehört, legen Sie zusätzlich diesen TXT-Eintrag an:',
+    'api.title' => 'API und Einbettung',
+    'api.help' => 'Die API liefert veröffentlichte Beiträge als JSON (Parameter page und per_page, höchstens 50). Der Code darunter bindet eine Liste der neuesten Beiträge in jede Seite ein (data-limit bis 20, optional data-excerpt="true" und data-target="#element-id").',
+    'api.url' => 'Adresse der API',
+    'api.embed' => 'Einbettungscode',
 ];
