@@ -30,9 +30,10 @@ final class ReviewController extends SiteController
             } catch (NotFoundException) {
                 return Response::text('Not found', 404);
             }
-            return $res['sent'] > 0
-                ? Response::redirect($this->url($s, "/posts/$id?notice=review_sent"))
-                : Response::redirect($this->url($s, "/posts/$id?error=err.mail_failed"));
+            if ($res['sent'] === 0) {
+                return Response::redirect($this->url($s, "/posts/$id?error=err.mail_failed"));
+            }
+            return Response::redirect($this->url($s, "/posts/$id?notice=" . ($res['failed'] === [] ? 'review_sent' : 'review_partial')));
         });
     }
 }

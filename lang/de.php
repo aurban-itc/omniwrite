@@ -168,4 +168,5 @@ return [
     'run.err.no_topic' => 'Kein aktives Thema in der Liste.',
     'run.err.send_failed' => 'Entwurf zu „{title}“ geschrieben, aber keine Mail konnte versendet werden.',
     'run.err.generic' => 'Unerwarteter Fehler, Details im Server-Log.',
+    'post.notice.review_partial' => 'Nicht an alle Empfänger zugestellt. Bitte die Adressen unter „Empfänger“ prüfen und erneut senden.',
 ];

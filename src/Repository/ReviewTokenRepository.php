@@ -29,6 +29,12 @@ final class ReviewTokenRepository
         return $stmt->fetch() ?: null;
     }
 
+    /** Alle Links zu einem Beitrag ungültig machen (nach Entscheidung, Zurückziehen, Löschen). */
+    public function deleteForPost(int $siteId, int $postId): void
+    {
+        $this->pdo->prepare('DELETE FROM review_tokens WHERE site_id = ? AND post_id = ?')->execute([$siteId, $postId]);
+    }
+
     public function deleteExpired(string $now): void
     {
         $this->pdo->prepare('DELETE FROM review_tokens WHERE expires_at <= ?')->execute([$now]);

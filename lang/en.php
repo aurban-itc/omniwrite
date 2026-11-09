@@ -167,4 +167,5 @@ return [
     'run.err.no_topic' => 'No active topic in the list.',
     'run.err.send_failed' => 'Draft for “{title}” written, but no email could be sent.',
     'run.err.generic' => 'Unexpected error, details in the server log.',
+    'post.notice.review_partial' => 'Not delivered to every recipient. Please check the addresses under “Recipients” and send again.',
 ];

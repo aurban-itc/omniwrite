@@ -113,10 +113,10 @@ final class ReviewFlowTest extends KernelTestCase
         self::assertSame('rev@example.com', $row['reviewed_by']);
         self::assertNotEmpty($row['published_at']);
 
-        // zweiter Klick ändert nichts mehr
+        // Der Link hat entschieden und ist verbraucht: ein zweiter Klick ändert nichts
         $again = $this->call('POST', "/review/$token/decline", ['note' => 'zu spät']);
+        self::assertSame(404, $again->status);
         self::assertSame('published', $this->postStatus());
-        self::assertStringContainsString('bereits', $again->body);
     }
 
     public function testDeclineStoresNote(): void
@@ -169,6 +169,51 @@ final class ReviewFlowTest extends KernelTestCase
         self::assertSame(404, $this->call('POST', "/review/$token/publish")->status);
         self::assertSame('in_review', $this->postStatus());
         self::assertSame(404, $this->call('GET', "/review/$token/hack")->status);
+    }
+
+    public function testRemovedOrPausedRecipientLinkIsDead(): void
+    {
+        $this->addRecipient();
+        $this->call('POST', "/sites/alpha/posts/{$this->postId}/send-review");
+        $token = $this->mailer->lastToken();
+        $id = (int) $this->pdo->query('SELECT id FROM recipients')->fetchColumn();
+        $this->call('POST', "/sites/alpha/recipients/$id/toggle");
+        self::assertSame(404, $this->call('POST', "/review/$token/publish")->status);
+        $this->call('POST', "/sites/alpha/recipients/$id/toggle");
+        self::assertSame(200, $this->call('GET', "/review/$token/publish")->status);
+        $this->call('POST', "/sites/alpha/recipients/$id/remove");
+        self::assertSame(404, $this->call('POST', "/review/$token/publish")->status);
+        self::assertSame('in_review', $this->postStatus());
+    }
+
+    public function testOwnerDecisionOrUnpublishInvalidatesOldLinks(): void
+    {
+        $this->addRecipient();
+        $this->call('POST', "/sites/alpha/posts/{$this->postId}/send-review");
+        $token = $this->mailer->lastToken();
+        $this->call('POST', "/sites/alpha/posts/{$this->postId}/publish");
+        $this->call('POST', "/sites/alpha/posts/{$this->postId}/unpublish");
+        self::assertSame('draft', $this->postStatus());
+        self::assertSame(404, $this->call('POST', "/review/$token/publish")->status);
+        self::assertSame('draft', $this->postStatus());
+    }
+
+    public function testEditCannotTouchDeclinedPostEvenInARace(): void
+    {
+        $posts = new PostRepository($this->pdo, new SiteContext($this->siteId));
+        $posts->update($this->postId, ['status' => 'declined']);
+        self::assertFalse($posts->updateWhileOpen($this->postId, ['title' => 'Hacked']));
+        self::assertNotSame('Hacked', $posts->find($this->postId)['title']);
+    }
+
+    public function testPartialDeliveryIsReported(): void
+    {
+        $this->addRecipient();
+        $this->addRecipient('b@example.com', '');
+        $this->mailer->failFor = ['b@example.com'];
+        $res = $this->call('POST', "/sites/alpha/posts/{$this->postId}/send-review");
+        self::assertSame("/sites/alpha/posts/{$this->postId}?notice=review_partial", $res->headers['Location']);
+        self::assertCount(1, $this->mailer->sent);
     }
 
     public function testRolesAndTenantIsolation(): void

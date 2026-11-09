@@ -47,8 +47,10 @@ final class ScheduleService
             return false;
         }
         $local = $this->local($site, $nowUtc);
+        // Gibt es die gewählte Stunde an diesem Tag nicht (Umstellung auf Sommerzeit), gilt die erste vorhandene danach.
+        $hour = (int) $local->setTime($cfg['hour'], 0)->format('G');
         return (int) $local->format('N') === $cfg['weekday']
-            && (int) $local->format('G') === $cfg['hour']
+            && (int) $local->format('G') === $hour
             && $repo->get('last_run_week') !== $local->format('o-W');
     }
 

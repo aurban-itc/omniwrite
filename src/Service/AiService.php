@@ -53,7 +53,7 @@ final class AiService
      * @return int Post-ID
      * @throws AiException|UsageLimitException|ValidationException
      */
-    public function generateDraft(ResolvedSite $s, User $actor, array $in, ?string $ip = null, bool $advanceRotation = false): int
+    public function generateDraft(ResolvedSite $s, User $actor, array $in, ?string $ip = null): int
     {
         $this->requireReady($s, $this->content->isConfigured());
         $topicId = (int) ($in['topic_id'] ?? 0);
@@ -82,7 +82,7 @@ final class AiService
         }
         if ($topicId > 0) {
             try {
-                $this->topics->markUsed($s, $topicId, $advanceRotation);
+                $this->topics->markUsed($s, $topicId, false);
             } catch (\OmniWrite\Domain\NotFoundException) {
                 // Thema wurde während der Erzeugung gelöscht: der fertige Entwurf bleibt erreichbar.
             }

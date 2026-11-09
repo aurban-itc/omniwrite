@@ -26,6 +26,13 @@ final class RecipientRepository extends SiteScopedRepository
         return $stmt->fetchAll();
     }
 
+    public function isActive(string $email): bool
+    {
+        $stmt = $this->pdo->prepare('SELECT 1 FROM recipients WHERE ' . $this->scopedWhere('email = :email AND active = 1'));
+        $stmt->execute(['site_id' => $this->site->siteId, 'email' => $email]);
+        return $stmt->fetchColumn() !== false;
+    }
+
     public function emailTaken(string $email): bool
     {
         $stmt = $this->pdo->prepare('SELECT 1 FROM recipients WHERE ' . $this->scopedWhere('email = :email'));

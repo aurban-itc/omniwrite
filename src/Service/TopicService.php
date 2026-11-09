@@ -111,6 +111,14 @@ final class TopicService
         return $repo->nextActiveAfter($cursor) ?? $repo->firstActive();
     }
 
+    /** Rückt die Rotation hinter dieses Thema (Wochenlauf, erst nach erfolgreichem Versand). */
+    public function advanceTo(ResolvedSite $s, int $id): void
+    {
+        $topic = $this->get($s, $id);
+        $this->settings($s)->set(self::CURSOR_KEY, (string) (int) $topic['sort_order']);
+        $this->settings($s)->set(self::CURSOR_ID_KEY, (string) $id);
+    }
+
     /** Verbucht die Nutzung eines Themas; $advance rückt die Rotation weiter (Wochenlauf), manuelles Schreiben tut das nicht. */
     public function markUsed(ResolvedSite $s, int $id, bool $advance): void
     {

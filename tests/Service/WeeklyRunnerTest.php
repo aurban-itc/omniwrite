@@ -126,6 +126,41 @@ final class WeeklyRunnerTest extends DbTestCase
         self::assertSame('draft', $posts[0]['status']);
     }
 
+    public function testFailedDeliveryDoesNotSkipTopicAndRetryReusesDraft(): void
+    {
+        $this->mailer->fail = true;
+        $this->http->pushToolUse(FakeHttpClient::post('Beitrag A'));
+        $runner = $this->runner();
+        $first = $runner->runDue($this->mondayMorning());
+        self::assertSame('failed', $first[0]['status']);
+        self::assertCount(1, (new PostRepository($this->pdo, $this->ctx))->all());
+
+        // Mail geht wieder: der Wiederholungslauf sendet denselben Entwurf, schreibt keinen neuen, und die Rotation rückt erst jetzt weiter
+        $this->mailer->fail = false;
+        $site = $this->fx->sites->findBySlug('alpha');
+        $retry = $runner->runSite($site);
+        self::assertSame('ok', $retry['status']);
+        self::assertCount(1, (new PostRepository($this->pdo, $this->ctx))->all());
+        self::assertCount(1, $this->http->requests);
+        self::assertCount(1, $this->mailer->sent);
+
+        $this->http->pushToolUse(FakeHttpClient::post('Beitrag B'));
+        $next = $runner->runSite($site);
+        self::assertStringContainsString('Thema Zwei', $next['message']);
+    }
+
+    public function testSkippedSpringHourRunsAtTheNextExistingHour(): void
+    {
+        $settings = new SiteSettingsRepository($this->pdo, $this->ctx);
+        $settings->set('schedule_weekday', '7');  // Sonntag
+        $settings->set('schedule_hour', '2');     // 2026-03-29 gibt es 02:xx in Berlin nicht
+        $this->http->pushToolUse(FakeHttpClient::post());
+        // 01:30 UTC = 03:30 Berlin (Sommerzeit seit 01:00 UTC)
+        $res = $this->runner()->runDue(new DateTimeImmutable('2026-03-29 01:30:00', new DateTimeZone('UTC')));
+        self::assertCount(1, $res);
+        self::assertSame('ok', $res[0]['status']);
+    }
+
     public function testClaimIsAtomic(): void
     {
         $settings = new SiteSettingsRepository($this->pdo, $this->ctx);

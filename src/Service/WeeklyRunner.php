@@ -9,7 +9,9 @@ use OmniWrite\Domain\Role;
 use OmniWrite\Domain\User;
 use OmniWrite\Domain\ValidationException;
 use OmniWrite\Mail\Mailer;
+use OmniWrite\Repository\PostRepository;
 use OmniWrite\Repository\RunRepository;
+use OmniWrite\Repository\SiteSettingsRepository;
 use OmniWrite\Repository\UserRepository;
 use OmniWrite\Support\Translator;
 use PDO;
@@ -21,6 +23,8 @@ use Throwable;
  */
 final class WeeklyRunner
 {
+    private const PENDING_KEY = 'run_pending';
+
     public function __construct(
         private readonly PDO $pdo,
         private readonly ScheduleService $schedule,
@@ -66,14 +70,29 @@ final class WeeklyRunner
             if (!$this->ai->textReady()) {
                 return $this->fail($site, null, $t('run.err.ai'), $owners);
             }
-            $topic = $this->topics->nextFor($rs);
-            if ($topic === null) {
-                return $this->fail($site, null, $t('run.err.no_topic'), $owners);
+            $settings = new SiteSettingsRepository($this->pdo, $rs->context);
+            // Ein früher geschriebener, aber nie zugestellter Entwurf wird erneut gesendet, statt einen neuen zu schreiben.
+            [$pendingPost, $pendingTopic] = array_map('intval', explode(':', $settings->get(self::PENDING_KEY, '0:0')) + [1 => 0]);
+            $pending = $pendingPost > 0 ? (new PostRepository($this->pdo, $rs->context))->find($pendingPost) : null;
+            if ($pending !== null && in_array($pending['status'], ['draft', 'in_review'], true)) {
+                $postId = $pendingPost;
+                $topic = $pendingTopic > 0 ? $this->topics->get($rs, $pendingTopic) : ['id' => 0, 'title' => (string) $pending['title']];
+            } else {
+                $settings->delete(self::PENDING_KEY);
+                $topic = $this->topics->nextFor($rs);
+                if ($topic === null) {
+                    return $this->fail($site, null, $t('run.err.no_topic'), $owners);
+                }
+                $postId = $this->ai->generateDraft($rs, $actor, ['topic_id' => (int) $topic['id']], null);
             }
-            $postId = $this->ai->generateDraft($rs, $actor, ['topic_id' => (int) $topic['id']], null, true);
             $res = $this->review->send($rs, $actor, $postId);
             if ($res['sent'] === 0) {
+                $settings->set(self::PENDING_KEY, $postId . ':' . (int) $topic['id']);
                 return $this->fail($site, $postId, $t('run.err.send_failed', ['title' => (string) $topic['title']]), $owners);
+            }
+            $settings->delete(self::PENDING_KEY);
+            if ((int) $topic['id'] > 0) {
+                $this->topics->advanceTo($rs, (int) $topic['id']); // Rotation erst weiter, wenn die Mail raus ist
             }
             $msg = $t('run.ok', ['title' => (string) $topic['title'], 'sent' => $res['sent']]) . ($res['failed'] !== [] ? ' ' . $t('run.failed_to', ['list' => implode(', ', $res['failed'])]) : '');
             $this->log($site, 'ok', $postId, $msg);

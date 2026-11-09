@@ -11,6 +11,8 @@ final class FakeMailer implements Mailer
     /** @var list<array{to: string, name: string, subject: string, html: string, text: string}> */
     public array $sent = [];
     public bool $fail = false;
+    /** @var list<string> Adressen, an die der Versand scheitert */
+    public array $failFor = [];
     public bool $configured = true;
 
     public function isConfigured(): bool
@@ -20,7 +22,7 @@ final class FakeMailer implements Mailer
 
     public function send(string $toEmail, string $toName, string $subject, string $html, string $text): bool
     {
-        if ($this->fail) {
+        if ($this->fail || in_array($toEmail, $this->failFor, true)) {
             return false;
         }
         $this->sent[] = ['to' => $toEmail, 'name' => $toName, 'subject' => $subject, 'html' => $html, 'text' => $text];

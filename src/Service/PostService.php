@@ -9,6 +9,7 @@ use OmniWrite\Domain\NotFoundException;
 use OmniWrite\Domain\User;
 use OmniWrite\Domain\ValidationException;
 use OmniWrite\Repository\PostRepository;
+use OmniWrite\Repository\ReviewTokenRepository;
 use OmniWrite\Support\Html;
 use OmniWrite\Support\Slugger;
 use PDO;
@@ -145,6 +146,9 @@ final class PostService
             $data['published_at'] = gmdate('Y-m-d H:i:s');
         }
         $this->repo($s)->update($id, $data);
+        if ($to !== 'in_review') {
+            (new ReviewTokenRepository($this->pdo))->deleteForPost($s->id(), $id); // Mail-Links gelten nur, solange der Beitrag in Prüfung ist
+        }
         $this->audit->log('post.' . $action, $actor->id, $s->accountId(), ['site_id' => $s->id(), 'post_id' => $id], $ip);
         return $to;
     }
@@ -157,6 +161,7 @@ final class PostService
             throw new ValidationException(['status' => 'err.delete_published']);
         }
         $this->repo($s)->delete($id);
+        (new ReviewTokenRepository($this->pdo))->deleteForPost($s->id(), $id);
         $this->audit->log('post.delete', $actor->id, $s->accountId(), ['site_id' => $s->id(), 'post_id' => $id], $ip);
     }
 

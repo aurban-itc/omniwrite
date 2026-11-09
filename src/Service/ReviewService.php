@@ -106,6 +106,10 @@ final class ReviewService
         }
         $site = (new SiteRepository($this->pdo))->find((int) $row['site_id']);
         $context = new SiteContext((int) $row['site_id']);
+        // Wer als Empfänger entfernt oder pausiert wurde, dessen Link ist sofort tot.
+        if (!(new RecipientRepository($this->pdo, $context))->isActive((string) $row['email'])) {
+            return null;
+        }
         $post = (new PostRepository($this->pdo, $context))->find((int) $row['post_id']);
         if ($site === null || $post === null) {
             return null;
@@ -152,7 +156,7 @@ final class ReviewService
             return false;
         }
         $excerpt = trim((string) ($in['excerpt'] ?? ''));
-        $ok = $posts->updateUnlessPublished((int) $current['id'], [
+        $ok = $posts->updateWhileOpen((int) $current['id'], [
             'title' => $title, 'body_html' => $body,
             'excerpt' => $excerpt !== '' ? mb_substr($excerpt, 0, 600) : mb_substr(Html::text($body), 0, 300),
             'meta_description' => mb_substr(trim((string) ($in['meta_description'] ?? '')), 0, 320),
@@ -170,6 +174,8 @@ final class ReviewService
         $posts = new PostRepository($this->pdo, $ticket['context']);
         $ok = $posts->decide((int) $ticket['post']['id'], $status, $ticket['email'], $note, gmdate('Y-m-d H:i:s'));
         if ($ok) {
+            // Ein Link entscheidet genau einmal: alle Links zu diesem Beitrag werden ungültig.
+            (new ReviewTokenRepository($this->pdo))->deleteForPost($ticket['context']->siteId, (int) $ticket['post']['id']);
             $this->audit->log($action, null, (int) $ticket['site']['account_id'], ['site_id' => $ticket['context']->siteId, 'post_id' => (int) $ticket['post']['id'], 'by' => $ticket['email']], $ip);
         }
         return $ok;
