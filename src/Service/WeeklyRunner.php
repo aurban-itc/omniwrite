@@ -5,6 +5,7 @@ namespace OmniWrite\Service;
 
 use DateTimeImmutable;
 use OmniWrite\Ai\AiException;
+use OmniWrite\Domain\NotFoundException;
 use OmniWrite\Domain\Role;
 use OmniWrite\Domain\User;
 use OmniWrite\Domain\ValidationException;
@@ -74,9 +75,21 @@ final class WeeklyRunner
             // Ein früher geschriebener, aber nie zugestellter Entwurf wird erneut gesendet, statt einen neuen zu schreiben.
             [$pendingPost, $pendingTopic] = array_map('intval', explode(':', $settings->get(self::PENDING_KEY, '0:0')) + [1 => 0]);
             $pending = $pendingPost > 0 ? (new PostRepository($this->pdo, $rs->context))->find($pendingPost) : null;
-            if ($pending !== null && in_array($pending['status'], ['draft', 'in_review'], true)) {
+            if ($pending !== null && $pending['status'] === 'in_review') {
+                // Wurde inzwischen von Hand zugestellt: nur noch die Rotation nachziehen und normal weitermachen.
+                $this->advanceIfExists($rs, $pendingTopic);
+                $pending = null;
+            }
+            if ($pending !== null && $pending['status'] === 'draft') {
                 $postId = $pendingPost;
-                $topic = $pendingTopic > 0 ? $this->topics->get($rs, $pendingTopic) : ['id' => 0, 'title' => (string) $pending['title']];
+                $topic = ['id' => 0, 'title' => (string) $pending['title']];
+                if ($pendingTopic > 0) {
+                    try {
+                        $topic = $this->topics->get($rs, $pendingTopic);
+                    } catch (NotFoundException) {
+                        // Thema wurde gelöscht: Entwurf trotzdem senden, Rotation unverändert lassen.
+                    }
+                }
             } else {
                 $settings->delete(self::PENDING_KEY);
                 $topic = $this->topics->nextFor($rs);
@@ -91,9 +104,7 @@ final class WeeklyRunner
                 return $this->fail($site, $postId, $t('run.err.send_failed', ['title' => (string) $topic['title']]), $owners);
             }
             $settings->delete(self::PENDING_KEY);
-            if ((int) $topic['id'] > 0) {
-                $this->topics->advanceTo($rs, (int) $topic['id']); // Rotation erst weiter, wenn die Mail raus ist
-            }
+            $this->advanceIfExists($rs, (int) $topic['id']); // Rotation erst weiter, wenn die Mail raus ist
             $msg = $t('run.ok', ['title' => (string) $topic['title'], 'sent' => $res['sent']]) . ($res['failed'] !== [] ? ' ' . $t('run.failed_to', ['list' => implode(', ', $res['failed'])]) : '');
             $this->log($site, 'ok', $postId, $msg);
             return ['status' => 'ok', 'message' => $msg, 'post_id' => $postId];
@@ -104,6 +115,18 @@ final class WeeklyRunner
         } catch (Throwable $e) {
             error_log('weekly run site ' . $site['id'] . ': ' . $e);
             return $this->fail($site, $postId, $t('run.err.generic'), $owners);
+        }
+    }
+
+    private function advanceIfExists(ResolvedSite $rs, int $topicId): void
+    {
+        if ($topicId <= 0) {
+            return;
+        }
+        try {
+            $this->topics->advanceTo($rs, $topicId);
+        } catch (NotFoundException) {
+            // Thema inzwischen gelöscht: nichts weiterzurücken.
         }
     }
 

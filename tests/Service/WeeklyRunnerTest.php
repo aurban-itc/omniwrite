@@ -149,6 +149,42 @@ final class WeeklyRunnerTest extends DbTestCase
         self::assertStringContainsString('Thema Zwei', $next['message']);
     }
 
+    public function testDeletedPendingTopicStillSendsTheDraft(): void
+    {
+        $this->mailer->fail = true;
+        $this->http->pushToolUse(FakeHttpClient::post('Beitrag A'));
+        $runner = $this->runner();
+        $site = $this->fx->sites->findBySlug('alpha');
+        self::assertSame('failed', $runner->runSite($site)['status']);
+        $pending = (new SiteSettingsRepository($this->pdo, $this->ctx))->get('run_pending', '0:0');
+        $topicId = (int) explode(':', $pending)[1];
+        (new \OmniWrite\Repository\TopicRepository($this->pdo, $this->ctx))->delete($topicId);
+
+        $this->mailer->fail = false;
+        self::assertSame('ok', $runner->runSite($site)['status']);
+        self::assertCount(1, $this->mailer->sent);
+        self::assertSame('0', (new SiteSettingsRepository($this->pdo, $this->ctx))->get('run_pending', '0'));
+    }
+
+    public function testManualSendOfPendingDraftIsNotMailedAgain(): void
+    {
+        $this->mailer->fail = true;
+        $this->http->pushToolUse(FakeHttpClient::post('Beitrag A'));
+        $runner = $this->runner();
+        $site = $this->fx->sites->findBySlug('alpha');
+        self::assertSame('failed', $runner->runSite($site)['status']);
+        $posts = new PostRepository($this->pdo, $this->ctx);
+        $postId = (int) $posts->all()[0]['id'];
+        $posts->update($postId, ['status' => 'in_review']); // Owner hat den Entwurf von Hand verschickt
+
+        $this->mailer->fail = false;
+        $this->http->pushToolUse(FakeHttpClient::post('Beitrag B'));
+        $res = $runner->runSite($site);
+        self::assertSame('ok', $res['status']);
+        self::assertNotSame($postId, $res['post_id']);
+        self::assertStringContainsString('Thema Zwei', $res['message']);
+    }
+
     public function testSkippedSpringHourRunsAtTheNextExistingHour(): void
     {
         $settings = new SiteSettingsRepository($this->pdo, $this->ctx);
