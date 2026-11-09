@@ -32,6 +32,14 @@ class SiteRepository
         return $stmt->fetch() ?: null;
     }
 
+    /** @return array<string, mixed>|null */
+    public function find(int $id): ?array
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM sites WHERE id = ?');
+        $stmt->execute([$id]);
+        return $stmt->fetch() ?: null;
+    }
+
     public function slugExists(string $slug): bool
     {
         $stmt = $this->pdo->prepare('SELECT 1 FROM sites WHERE slug = ?');

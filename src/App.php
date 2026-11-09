@@ -34,7 +34,17 @@ use OmniWrite\Repository\AccountRepository;
 use OmniWrite\Repository\SiteRepository;
 use OmniWrite\Repository\TotpRepository;
 use OmniWrite\Repository\UserRepository;
+use OmniWrite\Http\Controller\RecipientController;
+use OmniWrite\Http\Controller\ReviewController;
+use OmniWrite\Http\Controller\ReviewPageController;
+use OmniWrite\Http\Controller\ScheduleController;
+use OmniWrite\Mail\Mailer;
+use OmniWrite\Mail\ResendMailer;
 use OmniWrite\Service\AiService;
+use OmniWrite\Service\RecipientService;
+use OmniWrite\Service\ReviewService;
+use OmniWrite\Service\ScheduleService;
+use OmniWrite\Service\WeeklyRunner;
 use OmniWrite\Service\PostService;
 use OmniWrite\Service\SiteAccess;
 use OmniWrite\Service\SiteService;
@@ -61,8 +71,8 @@ final class App
         );
     }
 
-    /** @param ?HttpClient $http Transport für KI-Anbieter (Tests liefern ein Fake) */
-    public static function kernel(PDO $pdo, Config $config, ?string $root = null, ?HttpClient $http = null): Kernel
+    /** @param ?HttpClient $http Transport für KI-Anbieter und Mail (Tests liefern ein Fake); $mailer überschreibt den Mailversand */
+    public static function kernel(PDO $pdo, Config $config, ?string $root = null, ?HttpClient $http = null, ?Mailer $mailer = null): Kernel
     {
         $root ??= dirname(__DIR__);
         $users = new UserRepository($pdo);
@@ -98,23 +108,19 @@ final class App
         $http ??= new CurlHttpClient();
         $store = new ImageStore((string) $config->get('storage.path', $root . '/storage'));
         $usage = new UsageService($pdo, $accounts);
-        $ai = new AiService(
-            $pdo, $audit,
-            new ContentAi(new ClaudeClient(
-                $http, (string) $config->get('ai.anthropic_api_key', ''),
-                (string) $config->get('ai.anthropic_model', ClaudeClient::DEFAULT_MODEL),
-                (string) $config->get('ai.anthropic_endpoint', ClaudeClient::DEFAULT_ENDPOINT),
-            )),
-            new OpenAiImageClient(
-                $http, (string) $config->get('ai.openai_api_key', ''),
-                (string) $config->get('ai.openai_image_model', 'gpt-image-1'),
-                (string) $config->get('ai.openai_endpoint', OpenAiImageClient::DEFAULT_ENDPOINT),
-            ),
-            $store, $postService, $topicService, $settingsService, $usage,
-        );
+        $ai = self::buildAi($pdo, $config, $audit, $http, $store, $postService, $topicService, $settingsService, $usage);
         $postC = new PostController($siteAccess, $view, $postService, $ai);
         $aiC = new AiController($siteAccess, $view, $translator, $ai, $topicService, $usage);
         $mediaC = new MediaController($store);
+        $mailer ??= self::buildMailer($config, $http);
+        $review = self::buildReview($pdo, $config, $audit, $mailer, $translator);
+        $recipientService = new RecipientService($pdo, $audit);
+        $schedule = new ScheduleService($pdo, $audit);
+        $runner = new WeeklyRunner($pdo, $schedule, $ai, $topicService, $review, $mailer, $translator);
+        $recipientC = new RecipientController($siteAccess, $view, $recipientService);
+        $scheduleC = new ScheduleController($siteAccess, $view, $schedule, $runner, $pdo);
+        $reviewC = new ReviewController($siteAccess, $review);
+        $reviewPageC = new ReviewPageController($view, $review);
 
         $router = new Router();
         $router->add('GET', '/health', static fn (): Response => Response::json(['status' => 'ok']));
@@ -137,7 +143,16 @@ final class App
         $router->add('POST', '/sites/{slug}/posts', $postC->save(...), 'user');
         $router->add('GET', '/sites/{slug}/posts/{id}', $postC->editForm(...), 'user');
         $router->add('POST', '/sites/{slug}/posts/{id}', $postC->save(...), 'user');
+        $router->add('POST', '/sites/{slug}/posts/{id}/send-review', $reviewC->send(...), 'user');
         $router->add('POST', '/sites/{slug}/posts/{id}/{action}', $postC->action(...), 'user');
+        $router->add('GET', '/sites/{slug}/recipients', $recipientC->index(...), 'user');
+        $router->add('POST', '/sites/{slug}/recipients', $recipientC->add(...), 'user');
+        $router->add('POST', '/sites/{slug}/recipients/{id}/{action}', $recipientC->action(...), 'user');
+        $router->add('GET', '/sites/{slug}/schedule', $scheduleC->index(...), 'user');
+        $router->add('POST', '/sites/{slug}/schedule', $scheduleC->save(...), 'user');
+        $router->add('POST', '/sites/{slug}/schedule/run', $scheduleC->run(...), 'user');
+        $router->add('GET', '/review/{token}/{do}', $reviewPageC->show(...));
+        $router->add('POST', '/review/{token}/{do}', $reviewPageC->act(...));
         $router->add('GET', '/sites/{slug}/generate', $aiC->generateForm(...), 'user');
         $router->add('POST', '/sites/{slug}/generate', $aiC->generate(...), 'user');
         $router->add('POST', '/sites/{slug}/ai/revise', $aiC->revise(...), 'user');
@@ -156,5 +171,56 @@ final class App
         $router->add('POST', '/admin/users/{id}/activate', $admin->activate(...), 'superadmin');
 
         return new Kernel($router, $users, $csrf, $twoFactor, $audit, (string) $config->get('app.default_locale', 'de'));
+    }
+
+    private static function buildAi(PDO $pdo, Config $config, AuditLogger $audit, HttpClient $http, ImageStore $store, PostService $postService, TopicService $topicService, SiteSettingsService $settingsService, UsageService $usage): AiService
+    {
+        return new AiService(
+            $pdo, $audit,
+            new ContentAi(new ClaudeClient(
+                $http, (string) $config->get('ai.anthropic_api_key', ''),
+                (string) $config->get('ai.anthropic_model', ClaudeClient::DEFAULT_MODEL),
+                (string) $config->get('ai.anthropic_endpoint', ClaudeClient::DEFAULT_ENDPOINT),
+            )),
+            new OpenAiImageClient(
+                $http, (string) $config->get('ai.openai_api_key', ''),
+                (string) $config->get('ai.openai_image_model', 'gpt-image-1'),
+                (string) $config->get('ai.openai_endpoint', OpenAiImageClient::DEFAULT_ENDPOINT),
+            ),
+            $store, $postService, $topicService, $settingsService, $usage,
+        );
+    }
+
+    private static function buildMailer(Config $config, HttpClient $http): Mailer
+    {
+        return new ResendMailer(
+            $http, (string) $config->get('mail.resend_api_key', ''), (string) $config->get('mail.from', ''),
+            (string) $config->get('mail.endpoint', ResendMailer::DEFAULT_ENDPOINT),
+        );
+    }
+
+    private static function buildReview(PDO $pdo, Config $config, AuditLogger $audit, Mailer $mailer, Translator $translator): ReviewService
+    {
+        return new ReviewService($pdo, $audit, $mailer, $translator, (string) $config->get('app.base_url', ''), max(1, (int) $config->get('review.link_hours', 72)));
+    }
+
+    /** Wochenlauf ohne HTTP-Kernel (bin/cron.php). */
+    public static function weeklyRunner(PDO $pdo, Config $config, ?string $root = null, ?HttpClient $http = null, ?Mailer $mailer = null): WeeklyRunner
+    {
+        $root ??= dirname(__DIR__);
+        $http ??= new CurlHttpClient();
+        $audit = new AuditLogger($pdo);
+        $translator = new Translator($root . '/lang');
+        $postService = new PostService($pdo, $audit);
+        $topicService = new TopicService($pdo, $audit);
+        $settingsService = new SiteSettingsService($pdo, $audit);
+        $usage = new UsageService($pdo, new AccountRepository($pdo));
+        $store = new ImageStore((string) $config->get('storage.path', $root . '/storage'));
+        $ai = self::buildAi($pdo, $config, $audit, $http, $store, $postService, $topicService, $settingsService, $usage);
+        $mailer ??= self::buildMailer($config, $http);
+        return new WeeklyRunner(
+            $pdo, new ScheduleService($pdo, $audit), $ai, $topicService,
+            self::buildReview($pdo, $config, $audit, $mailer, $translator), $mailer, $translator,
+        );
     }
 }

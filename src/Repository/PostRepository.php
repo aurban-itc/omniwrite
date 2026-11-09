@@ -19,6 +19,7 @@ final class PostRepository extends SiteScopedRepository
         return [
             'title', 'slug', 'body_html', 'status', 'excerpt', 'category', 'keywords', 'meta_description',
             'cover_image', 'cover_alt', 'image_prompt', 'read_minutes', 'topic_id', 'published_at', 'updated_at',
+            'reviewed_by', 'reviewed_at', 'review_note',
         ];
     }
 
@@ -38,6 +39,50 @@ final class PostRepository extends SiteScopedRepository
         $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll();
+    }
+
+    /**
+     * Entscheidung aus der Review-Mail: nur, solange der Beitrag noch auf eine Entscheidung wartet (atomar).
+     *
+     * @return bool false, wenn schon entschieden oder nicht vorhanden
+     */
+    public function decide(int $id, string $status, string $by, string $note, string $now): bool
+    {
+        $data = ['status' => $status, 'reviewed_by' => mb_substr($by, 0, 190), 'reviewed_at' => $now, 'review_note' => mb_substr($note, 0, 600), 'updated_at' => $now];
+        $params = ['id' => $id, 'site_id' => $this->site->siteId];
+        $sets = [];
+        foreach ($data as $col => $value) {
+            $sets[] = "$col = :set_$col";
+            $params["set_$col"] = $value;
+        }
+        if ($status === 'published') {
+            $sets[] = 'published_at = COALESCE(published_at, :published_at)';
+            $params['published_at'] = $now;
+        }
+        $stmt = $this->pdo->prepare(
+            'UPDATE posts SET ' . implode(', ', $sets) . ' WHERE ' . $this->scopedWhere("id = :id AND status IN ('draft', 'in_review')")
+        );
+        $stmt->execute($params);
+        return $stmt->rowCount() > 0;
+    }
+
+    /** Wie update(), ändert aber nur Beiträge, die noch auf eine Entscheidung warten (Entwurf oder in Prüfung), atomar. */
+    public function updateWhileOpen(int $id, array $data): bool
+    {
+        $data = array_intersect_key($data, array_flip($this->columns()));
+        if ($data === []) {
+            return false;
+        }
+        $sets = array_map(static fn (string $c): string => "$c = :set_$c", array_keys($data));
+        $params = ['id' => $id, 'site_id' => $this->site->siteId];
+        foreach ($data as $col => $value) {
+            $params["set_$col"] = $value;
+        }
+        $stmt = $this->pdo->prepare(
+            'UPDATE posts SET ' . implode(', ', $sets) . ' WHERE ' . $this->scopedWhere("id = :id AND status IN ('draft', 'in_review')")
+        );
+        $stmt->execute($params);
+        return $stmt->rowCount() > 0;
     }
 
     /** Wie update(), ändert aber nie einen veröffentlichten Beitrag (atomar, ohne Lücke zwischen Prüfen und Schreiben). */

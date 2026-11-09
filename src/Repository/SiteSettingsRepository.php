@@ -38,4 +38,30 @@ final class SiteSettingsRepository
     {
         $this->pdo->prepare('DELETE FROM site_settings WHERE site_id = ? AND k = ?')->execute([$this->site->siteId, $key]);
     }
+
+    /**
+     * Setzt den Wert nur, wenn er sich ändert; true für genau einen von mehreren gleichzeitigen Aufrufern (Wochenlauf).
+     */
+    public function claim(string $key, string $value): bool
+    {
+        $stmt = $this->pdo->prepare('UPDATE site_settings SET v = ? WHERE site_id = ? AND k = ? AND v <> ?');
+        $stmt->execute([$value, $this->site->siteId, $key, $value]);
+        if ($stmt->rowCount() > 0) {
+            return true;
+        }
+        $exists = $this->pdo->prepare('SELECT 1 FROM site_settings WHERE site_id = ? AND k = ?');
+        $exists->execute([$this->site->siteId, $key]);
+        if ($exists->fetchColumn() !== false) {
+            return false; // hat schon diesen Wert
+        }
+        try {
+            $this->pdo->prepare('INSERT INTO site_settings (site_id, k, v) VALUES (?, ?, ?)')->execute([$this->site->siteId, $key, $value]);
+            return true;
+        } catch (\PDOException $e) {
+            if ($e->getCode() === '23000') {
+                return false; // ein paralleler Lauf war schneller
+            }
+            throw $e;
+        }
+    }
 }

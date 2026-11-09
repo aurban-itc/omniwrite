@@ -28,6 +28,7 @@ abstract class KernelTestCase extends DbTestCase
     private array $offsets = [];
     private string $masterKey;
     protected FakeHttpClient $http;
+    protected FakeMailer $mailer;
     protected string $storageDir;
 
     protected function setUp(): void
@@ -37,13 +38,15 @@ abstract class KernelTestCase extends DbTestCase
         $this->users = new UserRepository($this->pdo);
         $this->accounts = new AccountRepository($this->pdo);
         $this->http = new FakeHttpClient();
+        $this->mailer = new FakeMailer();
         $this->storageDir = sys_get_temp_dir() . '/omniwrite-test-' . bin2hex(random_bytes(4));
         $this->kernel = App::kernel($this->pdo, new Config([
             'auth' => ['registration' => 'approval'],
             'security' => ['master_key' => $this->masterKey],
             'ai' => ['anthropic_api_key' => 'test-anthropic', 'openai_api_key' => 'test-openai'],
             'storage' => ['path' => $this->storageDir],
-        ]), null, $this->http);
+                    'app' => ['base_url' => 'https://omniwrite.example'],
+        ]), null, $this->http, $this->mailer);
     }
 
     protected function tearDown(): void
