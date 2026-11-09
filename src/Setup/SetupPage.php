@@ -60,7 +60,8 @@ final class SetupPage
             }
         } catch (Throwable $e) {
             error_log('setup: ' . $e);
-            return $this->page(500, $this->box('Fehler beim Ausführen, Details stehen im Server-Log (error_log).', true));
+            // Nur mit gültigem Setup-Token erreichbar; die Meldung hilft bei der Einrichtung (kein Passwort darin, PDO nennt keine Zugangsdaten).
+            return $this->page(500, $this->box('Fehler beim Ausführen: ' . mb_substr($e->getMessage(), 0, 500), true));
         }
         return $this->page(200, '');
     }
