@@ -22,6 +22,7 @@ PHP 8.2+ und MySQL 8 / MariaDB auf Hostinger. Der Code ist geschichtet, damit ei
 composer install
 cp config/config.example.php config/config.php   # nicht committen, Werte eintragen
 php bin/migrate.php                              # Migrationen anwenden
+# Ohne SSH: `setup.token` in config/config.php setzen, /setup.php im Browser öffnen (Migrationen + erster Superadmin), Token danach entfernen.
 php -S localhost:8000 -t public                  # lokal starten, /health prüfen
 ```
 

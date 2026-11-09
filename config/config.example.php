@@ -26,6 +26,9 @@ return [
         // Verschlüsselt 2FA-Secrets und später Anbindungs-Zugangsdaten (libsodium). Niemals ändern ohne Re-Encrypt.
         'master_key' => '',
     ],
+    // Einmalige Einrichtungsseite /setup.php (Migrationen, erster Superadmin) ohne SSH. Nur für die Einrichtung setzen
+    // (langer Zufallswert) und danach wieder entfernen; ohne Token antwortet die Seite mit 404.
+    // 'setup' => ['token' => ''],
     'ai' => [
         'anthropic_api_key' => '',
         'openai_api_key'    => '',
