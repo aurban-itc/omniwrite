@@ -42,6 +42,44 @@ final class Html
         return trim($out);
     }
 
+    /**
+     * Macht relative Links und Bilder absolut, damit der Text auch auf fremden Seiten stimmt (API). Absolute Adressen,
+     * mailto:/tel: bleiben, #Anker hängen am $pageUrl, /pfad am $origin, andere relative Pfade am $baseUrl.
+     */
+    public static function absolutize(string $html, string $origin, string $pageUrl, string $baseUrl): string
+    {
+        if ($html === '') {
+            return '';
+        }
+        $doc = new DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        $doc->loadHTML('<?xml encoding="utf-8"?><div id="ow-root">' . $html . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+        $root = $doc->getElementById('ow-root');
+        if ($root === null) {
+            return $html;
+        }
+        foreach (['a' => 'href', 'img' => 'src'] as $tag => $attr) {
+            foreach (iterator_to_array($root->getElementsByTagName($tag)) as $el) {
+                $v = trim($el->getAttribute($attr));
+                if ($v === '' || preg_match('#^(https?://|mailto:|tel:)#i', $v) === 1) {
+                    continue;
+                }
+                $el->setAttribute($attr, match (true) {
+                    $v[0] === '#' => $pageUrl . $v,
+                    $v[0] === '/' && !str_starts_with($v, '//') => rtrim($origin, '/') . $v,
+                    default => rtrim($baseUrl, '/') . '/' . ltrim($v, '/'),
+                });
+            }
+        }
+        $out = '';
+        foreach ($root->childNodes as $child) {
+            $out .= $doc->saveHTML($child);
+        }
+        return trim($out);
+    }
+
     public static function text(string $html): string
     {
         return trim((string) preg_replace('/\s+/', ' ', html_entity_decode(strip_tags(str_replace('<', ' <', $html)), ENT_QUOTES | ENT_HTML5, 'UTF-8')));

@@ -19,6 +19,7 @@ use OmniWrite\Http\Controller\AdminController;
 use OmniWrite\Http\Controller\AiController;
 use OmniWrite\Http\Controller\BlogSettingsController;
 use OmniWrite\Http\Controller\MediaController;
+use OmniWrite\Http\Controller\PublicApiController;
 use OmniWrite\Http\Controller\PublicBlogController;
 use OmniWrite\Http\Controller\AuthController;
 use OmniWrite\Http\Controller\DashboardController;
@@ -135,6 +136,7 @@ final class App
         $domains = new DomainService($pdo, $audit, $dns ?? new SystemDnsResolver(), $portalHost, (string) $config->get('security.master_key', ''));
         $publicBlog = new PublicBlogService($pdo, $blogSettings, $baseUrl);
         $publicC = new PublicBlogController($view, $publicBlog);
+        $apiC = new PublicApiController($publicBlog);
         $blogC = new BlogSettingsController($siteAccess, $view, $blogSettings, $domains, $baseUrl, $portalHost);
 
         // Öffentliche Routen: am Portal unter /b/<site>, auf einer eigenen Domain an der Wurzel.
@@ -144,11 +146,15 @@ final class App
         $publicRouter->add('GET', '/feed.xml', $publicC->feed(...));
         $publicRouter->add('GET', '/llms.txt', $publicC->llms(...));
         $publicRouter->add('GET', '/robots.txt', $publicC->robots(...));
+        $publicRouter->add('GET', '/api/v1/posts', $apiC->posts(...));
+        $publicRouter->add('GET', '/api/v1/posts/{post}', $apiC->post(...));
         $publicRouter->add('GET', '/media/{site}/{file}', $mediaC->show(...));
         $publicRouter->add('GET', '/{post}', $publicC->post(...));
 
         $router = new Router();
         $router->add('GET', '/robots.txt', $publicC->robots(...));
+        $router->add('GET', '/api/v1/sites/{site}/posts', $apiC->posts(...));
+        $router->add('GET', '/api/v1/sites/{site}/posts/{post}', $apiC->post(...));
         $router->add('GET', '/b/{site}', $publicC->index(...));
         $router->add('GET', '/b/{site}/', $publicC->index(...));
         $router->add('GET', '/b/{site}/sitemap.xml', $publicC->sitemap(...));

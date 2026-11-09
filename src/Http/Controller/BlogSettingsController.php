@@ -82,7 +82,14 @@ final class BlogSettingsController extends SiteController
     /** @param array<string, string> $values @param array<string, string> $errors */
     private function render(Request $r, ResolvedSite $s, array $values, array $errors, string $notice, int $status = 200): Response
     {
+        $slug = rawurlencode((string) $s->site['slug']);
+        $domain = $this->domains->get($s);
+        $own = $domain !== null && $domain['verified_at'] !== null;
+        $origin = $own ? 'https://' . $domain['host'] : rtrim($this->baseUrl, '/');
+        $apiUrl = $origin . ($own ? '/api/v1/posts' : '/api/v1/sites/' . $slug . '/posts');
+        $embed = '<script src="' . $origin . '/assets/embed.js"' . ($own ? '' : ' data-site="' . $slug . '"') . ' data-limit="5" async></script>';
         return $this->view->render($r, 'blog_settings', [
+            'apiUrl' => $apiUrl, 'embedSnippet' => $embed,
             'rs' => $s, 'site' => $s->site, 'values' => $values, 'errors' => $errors, 'notice' => $notice,
             'domain' => $domain = $this->domains->get($s), 'portalHost' => $this->portalHost,
             'challenge' => $domain !== null && $domain['verified_at'] === null ? $this->domains->challenge($s, (string) $domain['host']) : null,

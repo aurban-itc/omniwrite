@@ -62,3 +62,9 @@ $can = $rs->canPublish();
     </form>
   <?php endif; ?>
 <?php endif; ?>
+
+<h3><?= $e($t('api.title')) ?></h3>
+<p><small><?= $e($t('api.help')) ?></small></p>
+<p><?= $e($t('api.url')) ?>: <code><?= $e($apiUrl) ?></code></p>
+<p><?= $e($t('api.embed')) ?>:</p>
+<pre><code><?= $e($embedSnippet) ?></code></pre>
