@@ -90,6 +90,7 @@ final class TopicController extends SiteController
     {
         return $this->view->render($r, 'topics', [
             'rs' => $s, 'site' => $s->site, 'overview' => $this->topics->overview($s), 'errors' => $errors, 'old' => $old,
+            'suggested' => (int) ($r->query['suggested'] ?? 0),
         ], $status);
     }
 }

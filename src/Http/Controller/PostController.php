@@ -13,9 +13,9 @@ use OmniWrite\Service\SiteAccess;
 
 final class PostController extends SiteController
 {
-    private const FIELDS = ['title', 'slug', 'body_html', 'excerpt', 'category', 'keywords', 'meta_description', 'cover_image', 'cover_alt'];
+    private const FIELDS = ['title', 'slug', 'body_html', 'excerpt', 'category', 'keywords', 'meta_description', 'cover_image', 'cover_alt', 'image_prompt'];
 
-    public function __construct(SiteAccess $access, private readonly View $view, private readonly PostService $posts)
+    public function __construct(SiteAccess $access, private readonly View $view, private readonly PostService $posts, private readonly ?\OmniWrite\Service\AiService $ai = null)
     {
         parent::__construct($access);
     }
@@ -93,6 +93,7 @@ final class PostController extends SiteController
         return $this->view->render($r, 'post_edit', [
             'rs' => $s, 'site' => $s->site, 'post' => $post, 'values' => $values, 'errors' => $errors,
             'notice' => $notice, 'queryError' => $queryError,
+            'textReady' => $this->ai?->textReady() ?? false, 'imageReady' => $this->ai?->imageReady() ?? false,
         ], $status);
     }
 

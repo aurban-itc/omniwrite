@@ -99,6 +99,7 @@ final class PostService
             'meta_description' => mb_substr($meta, 0, 320),
             'cover_image' => $cover,
             'cover_alt' => mb_substr(trim((string) ($in['cover_alt'] ?? '')), 0, 255),
+            'image_prompt' => mb_substr(trim((string) ($in['image_prompt'] ?? '')), 0, 1000),
             'read_minutes' => Html::readMinutes($body),
             'updated_at' => gmdate('Y-m-d H:i:s'),
         ];

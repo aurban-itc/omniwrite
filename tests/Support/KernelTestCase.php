@@ -27,6 +27,8 @@ abstract class KernelTestCase extends DbTestCase
     /** @var array<string, int> nächster Zeitschritt-Offset pro Secret (Replay-Schutz verlangt steigende Schritte) */
     private array $offsets = [];
     private string $masterKey;
+    protected FakeHttpClient $http;
+    protected string $storageDir;
 
     protected function setUp(): void
     {
@@ -34,10 +36,25 @@ abstract class KernelTestCase extends DbTestCase
         $this->masterKey = base64_encode(str_repeat('k', 32));
         $this->users = new UserRepository($this->pdo);
         $this->accounts = new AccountRepository($this->pdo);
+        $this->http = new FakeHttpClient();
+        $this->storageDir = sys_get_temp_dir() . '/omniwrite-test-' . bin2hex(random_bytes(4));
         $this->kernel = App::kernel($this->pdo, new Config([
             'auth' => ['registration' => 'approval'],
             'security' => ['master_key' => $this->masterKey],
-        ]));
+            'ai' => ['anthropic_api_key' => 'test-anthropic', 'openai_api_key' => 'test-openai'],
+            'storage' => ['path' => $this->storageDir],
+        ]), null, $this->http);
+    }
+
+    protected function tearDown(): void
+    {
+        if (is_dir($this->storageDir)) {
+            foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->storageDir, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST) as $f) {
+                $f->isDir() ? rmdir($f->getPathname()) : unlink($f->getPathname());
+            }
+            rmdir($this->storageDir);
+        }
+        parent::tearDown();
     }
 
     /** @param array<string, mixed> $post */

@@ -18,7 +18,7 @@ final class PostRepository extends SiteScopedRepository
     {
         return [
             'title', 'slug', 'body_html', 'status', 'excerpt', 'category', 'keywords', 'meta_description',
-            'cover_image', 'cover_alt', 'read_minutes', 'topic_id', 'published_at', 'updated_at',
+            'cover_image', 'cover_alt', 'image_prompt', 'read_minutes', 'topic_id', 'published_at', 'updated_at',
         ];
     }
 

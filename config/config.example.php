@@ -29,6 +29,11 @@ return [
     'ai' => [
         'anthropic_api_key' => '',
         'openai_api_key'    => '',
+        // Optional: 'anthropic_model' => 'claude-sonnet-5-5', 'openai_image_model' => 'gpt-image-1'
+    ],
+    'storage' => [
+        // Bilder (KI-generiert). Außerhalb von public/ ablegen; muss für PHP beschreibbar sein.
+        // 'path' => __DIR__ . '/../storage',
     ],
     'mail' => [
         'resend_api_key' => '',
