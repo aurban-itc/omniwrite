@@ -33,4 +33,19 @@ final class HttpsPolicy
         $uri = (string) ($server['REQUEST_URI'] ?? '/');
         return rtrim($baseUrl, '/') . ($uri !== '' && $uri[0] === '/' ? $uri : '/');
     }
+
+    /**
+     * Redirect für HTTP-Aufrufe einer verifizierten eigenen Domain: auf deren eigene https-Adresse, nicht auf das Portal.
+     * $verifiedHost stammt aus der Datenbank, nie aus dem Host-Header.
+     *
+     * @param array<string, mixed> $server
+     */
+    public static function customDomainTarget(array $server, string $verifiedHost, bool $force, bool $trustForwardedProto): ?string
+    {
+        if (!$force || self::isSecure($server, $trustForwardedProto)) {
+            return null;
+        }
+        $uri = (string) ($server['REQUEST_URI'] ?? '/');
+        return 'https://' . $verifiedHost . ($uri !== '' && $uri[0] === '/' ? $uri : '/');
+    }
 }

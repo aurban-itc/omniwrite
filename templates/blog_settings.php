@@ -5,6 +5,7 @@ $can = $rs->canPublish();
 <h2><?= $e($t('blog.title')) ?></h2>
 <?php if ($notice === 'saved' || $notice === 'domain_saved'): ?><p class="ok"><?= $e($t('blog.saved')) ?></p><?php endif; ?>
 <?php if ($notice === 'domain_verified'): ?><p class="ok"><?= $e($t('domain.verified_notice')) ?></p><?php endif; ?>
+<?php if ($notice === 'domain_txt'): ?><p class="err"><?= $e($t('err.domain_txt')) ?></p><?php endif; ?>
 <?php if ($notice === 'domain_dns'): ?><p class="err"><?= $e($t('err.domain_dns')) ?></p><?php endif; ?>
 <p><?= $e($t('blog.public_url')) ?>: <a href="<?= $e($publicUrl) ?>"><?= $e($publicUrl) ?></a></p>
 
@@ -35,6 +36,10 @@ $can = $rs->canPublish();
 
 <h3><?= $e($t('domain.title')) ?></h3>
 <p><small><?= $e($t('domain.help', ['target' => $portalHost])) ?></small></p>
+<?php if ($challenge !== null): ?>
+  <p><small><?= $e($t('domain.txt_help')) ?></small><br>
+    <code><?= $e($challenge['name']) ?></code> TXT <code><?= $e($challenge['value']) ?></code></p>
+<?php endif; ?>
 <?php if ($domain !== null): ?>
   <p class="<?= $domain['verified_at'] !== null ? 'ok' : '' ?>">
     <?= $e($t($domain['verified_at'] !== null ? 'domain.status_ok' : 'domain.status_pending', ['host' => $domain['host']])) ?>

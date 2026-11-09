@@ -204,4 +204,6 @@ return [
     'err.home_url_invalid' => 'Please enter an https address.',
     'err.short_too_long' => 'The text is too long.',
     'post.view_live' => 'View',
+    'err.domain_txt' => 'Ownership proof missing: the TXT record is not visible in DNS yet.',
+    'domain.txt_help' => 'To prove you own the domain, also create this TXT record:',
 ];

@@ -31,6 +31,15 @@ final class PublicBlogTest extends KernelTestCase
         $this->call('POST', '/login', ['email' => $email, 'password' => 'some long password']);
     }
 
+    /** Liest den TXT-Nachweis von der Blog-Seite und "legt ihn im DNS an" (als der Inhaber der Domain). */
+    private function proveOwnership(string $slug, string $host): void
+    {
+        $page = $this->call('GET', "/sites/$slug/blog")->body;
+        self::assertSame(1, preg_match('#<code>(_omniwrite\.[^<]+)</code> TXT <code>(omniwrite-verify=[a-f0-9]{32})</code>#', $page, $m), 'TXT challenge shown');
+        self::assertSame('_omniwrite.' . $host, $m[1]);
+        $this->dns->txts[$m[1]] = [$m[2]];
+    }
+
     private function post(string $title, string $status = 'published', string $slug = '', string $extra = ''): int
     {
         return $this->posts->insert([
@@ -168,6 +177,7 @@ final class PublicBlogTest extends KernelTestCase
         self::assertSame(303, $this->call('GET', '/', [], true, 'blog.beispiel.de')->status);
 
         $this->login('owner@example.com');
+        $this->proveOwnership('alpha', 'blog.beispiel.de');
         $fail = $this->call('POST', '/sites/alpha/blog/domain/verify');
         self::assertStringContainsString('notice=domain_dns', (string) $fail->headers['Location']);
 
@@ -208,6 +218,7 @@ final class PublicBlogTest extends KernelTestCase
 
         $this->call('POST', '/sites/alpha/blog/domain', ['domain' => 'blog.beispiel.de']);
         $this->dns->cnames['blog.beispiel.de'] = ['omniwrite.example'];
+        $this->proveOwnership('alpha', 'blog.beispiel.de');
         $this->call('POST', '/sites/alpha/blog/domain/verify');
 
         $this->login('other@example.com');
@@ -228,6 +239,7 @@ final class PublicBlogTest extends KernelTestCase
         $this->login('other@example.com');
         $this->dns->cnames['blog.beispiel.de'] = ['omniwrite.example'];
         self::assertSame(303, $this->call('POST', '/sites/beta/blog/domain', ['domain' => 'blog.beispiel.de'])->status);
+        $this->proveOwnership('beta', 'blog.beispiel.de');
         self::assertStringContainsString('domain_verified', (string) $this->call('POST', '/sites/beta/blog/domain/verify')->headers['Location']);
         self::assertSame($otherSite, (int) (new DomainRepository($this->pdo))->findByHost('blog.beispiel.de')['site_id']);
         self::assertNull((new DomainRepository($this->pdo))->forSite($this->siteId));
@@ -236,6 +248,7 @@ final class PublicBlogTest extends KernelTestCase
     public function testAddressMatchVerifiesApexDomains(): void
     {
         $this->call('POST', '/sites/alpha/blog/domain', ['domain' => 'beispiel.de']);
+        $this->proveOwnership('alpha', 'beispiel.de');
         $this->dns->addresses['omniwrite.example'] = ['203.0.113.7'];
         $this->dns->addresses['beispiel.de'] = ['198.51.100.9'];
         self::assertStringContainsString('domain_dns', (string) $this->call('POST', '/sites/alpha/blog/domain/verify')->headers['Location']);
@@ -248,6 +261,7 @@ final class PublicBlogTest extends KernelTestCase
         $this->post('Erster Beitrag');
         $this->call('POST', '/sites/alpha/blog/domain', ['domain' => 'blog.beispiel.de']);
         $this->dns->cnames['blog.beispiel.de'] = ['omniwrite.example'];
+        $this->proveOwnership('alpha', 'blog.beispiel.de');
         $this->call('POST', '/sites/alpha/blog/domain/verify');
         $this->call('POST', '/sites/alpha/blog/domain/remove');
         self::assertNull((new DomainRepository($this->pdo))->forSite($this->siteId));
@@ -260,5 +274,56 @@ final class PublicBlogTest extends KernelTestCase
     {
         $res = $this->call('GET', '/robots.txt');
         self::assertStringContainsString("Disallow: /\nAllow: /b/", $res->body);
+    }
+
+    public function testPointingAtThePortalDoesNotProveOwnership(): void
+    {
+        // Das Opfer hat seine Domain bereits auf das Portal gerichtet, ein anderer Mandant versucht sie zu beanspruchen.
+        $other = $this->createUser('attacker@example.com');
+        $otherAccount = $this->accounts->membershipsOf($other)[0]['id'];
+        (new SiteRepository($this->pdo))->create($otherAccount, 'evil', 'Evil', 'en', 'UTC');
+        $this->dns->cnames['blog.opfer.de'] = ['omniwrite.example'];
+        $this->login('attacker@example.com');
+        $this->call('POST', '/sites/evil/blog/domain', ['domain' => 'blog.opfer.de']);
+        $res = $this->call('POST', '/sites/evil/blog/domain/verify');
+        self::assertStringContainsString('notice=domain_txt', (string) $res->headers['Location']);
+        $this->dns->txts['_omniwrite.blog.opfer.de'] = ['omniwrite-verify=' . str_repeat('0', 32)];
+        self::assertStringContainsString('domain_txt', (string) $this->call('POST', '/sites/evil/blog/domain/verify')->headers['Location']);
+        $this->sessionData = [];
+        self::assertSame(303, $this->call('GET', '/', [], true, 'blog.opfer.de')->status); // Portal, kein Blog
+
+        // Das Token einer anderen Site auf demselben Host passt nicht (Token ist an Site und Host gebunden).
+        $this->login('owner@example.com');
+        $this->call('POST', '/sites/alpha/blog/domain', ['domain' => 'blog.opfer.de']);
+        $this->proveOwnership('alpha', 'blog.opfer.de');
+        $tokenAlpha = $this->dns->txts['_omniwrite.blog.opfer.de'];
+        $this->login('attacker@example.com');
+        $this->call('POST', '/sites/evil/blog/domain', ['domain' => 'blog.opfer.de']);
+        $this->dns->txts['_omniwrite.blog.opfer.de'] = $tokenAlpha;
+        self::assertStringContainsString('domain_txt', (string) $this->call('POST', '/sites/evil/blog/domain/verify')->headers['Location']);
+    }
+
+    public function testResavingAVerifiedDomainKeepsItOnline(): void
+    {
+        $this->post('Erster Beitrag');
+        $this->call('POST', '/sites/alpha/blog/domain', ['domain' => 'blog.beispiel.de']);
+        $this->dns->cnames['blog.beispiel.de'] = ['omniwrite.example'];
+        $this->proveOwnership('alpha', 'blog.beispiel.de');
+        $this->call('POST', '/sites/alpha/blog/domain/verify');
+        $this->call('POST', '/sites/alpha/blog/domain', ['domain' => 'Blog.Beispiel.de']);
+        self::assertNotNull((new DomainRepository($this->pdo))->forSite($this->siteId)['verified_at']);
+        $this->sessionData = [];
+        self::assertSame(200, $this->call('GET', '/', [], true, 'blog.beispiel.de')->status);
+    }
+
+    public function testLegacyPublishedPostsWithoutTimestampsStillGetValidFeedAndSitemap(): void
+    {
+        $id = $this->post('Altbestand');
+        $this->pdo->exec("UPDATE posts SET published_at = NULL, updated_at = NULL, created_at = '2025-01-02 03:04:05' WHERE id = $id");
+        $map = $this->call('GET', '/b/alpha/sitemap.xml')->body;
+        self::assertStringContainsString('<lastmod>2025-01-02</lastmod>', $map);
+        self::assertStringNotContainsString('<lastmod></lastmod>', $map);
+        self::assertStringContainsString('Thu, 02 Jan 2025 03:04:05', $this->call('GET', '/b/alpha/feed.xml')->body);
+        self::assertSame(200, $this->call('GET', '/b/alpha/altbestand')->status);
     }
 }

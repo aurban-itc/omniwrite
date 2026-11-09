@@ -33,4 +33,12 @@ final class HttpsPolicyTest extends TestCase
         self::assertNull(HttpsPolicy::redirectTarget(['REQUEST_URI' => '/'], self::BASE, false, false));
         self::assertNull(HttpsPolicy::redirectTarget(['REQUEST_URI' => '/'], 'http://localhost:8000', true, false));
     }
+
+    public function testCustomDomainRedirectsToItsOwnHttpsOrigin(): void
+    {
+        $server = ['HTTPS' => 'off', 'REQUEST_URI' => '/beitrag?x=1'];
+        self::assertSame('https://blog.kunde.de/beitrag?x=1', HttpsPolicy::customDomainTarget($server, 'blog.kunde.de', true, false));
+        self::assertNull(HttpsPolicy::customDomainTarget(['HTTPS' => 'on', 'REQUEST_URI' => '/'], 'blog.kunde.de', true, false));
+        self::assertNull(HttpsPolicy::customDomainTarget($server, 'blog.kunde.de', false, false));
+    }
 }

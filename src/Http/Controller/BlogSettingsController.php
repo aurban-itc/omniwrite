@@ -63,11 +63,11 @@ final class BlogSettingsController extends SiteController
     {
         return $this->withSite($r, function (ResolvedSite $s) use ($r): Response {
             try {
-                $ok = $this->domains->verify($s, $r->user, $r->ip);
+                $result = $this->domains->verify($s, $r->user, $r->ip);
             } catch (ValidationException $e) {
                 return $this->render($r, $s, $this->settings->theme($s->context), $e->errors, '', 422);
             }
-            return Response::redirect($this->url($s, '/blog?notice=' . ($ok ? 'domain_verified' : 'domain_dns')));
+            return Response::redirect($this->url($s, '/blog?notice=' . (['ok' => 'domain_verified', 'txt' => 'domain_txt'][$result] ?? 'domain_dns')));
         });
     }
 
@@ -84,7 +84,8 @@ final class BlogSettingsController extends SiteController
     {
         return $this->view->render($r, 'blog_settings', [
             'rs' => $s, 'site' => $s->site, 'values' => $values, 'errors' => $errors, 'notice' => $notice,
-            'domain' => $this->domains->get($s), 'portalHost' => $this->portalHost,
+            'domain' => $domain = $this->domains->get($s), 'portalHost' => $this->portalHost,
+            'challenge' => $domain !== null && $domain['verified_at'] === null ? $this->domains->challenge($s, (string) $domain['host']) : null,
             'publicUrl' => rtrim($this->baseUrl, '/') . '/b/' . rawurlencode((string) $s->site['slug']) . '/',
         ], $status);
     }

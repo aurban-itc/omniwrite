@@ -132,7 +132,7 @@ final class App
         $baseUrl = (string) $config->get('app.base_url', '');
         $portalHost = strtolower((string) parse_url($baseUrl, PHP_URL_HOST));
         $blogSettings = new BlogSettingsService($pdo, $audit);
-        $domains = new DomainService($pdo, $audit, $dns ?? new SystemDnsResolver(), $portalHost);
+        $domains = new DomainService($pdo, $audit, $dns ?? new SystemDnsResolver(), $portalHost, (string) $config->get('security.master_key', ''));
         $publicBlog = new PublicBlogService($pdo, $blogSettings, $baseUrl);
         $publicC = new PublicBlogController($view, $publicBlog);
         $blogC = new BlogSettingsController($siteAccess, $view, $blogSettings, $domains, $baseUrl, $portalHost);

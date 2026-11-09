@@ -7,7 +7,7 @@
     <?php if ((string) $p['cover_image'] !== ''): ?>
       <a href="<?= $e($b->link('/' . rawurlencode((string) $p['slug']))) ?>"><img src="<?= $e($p['cover_image']) ?>" alt="<?= $e($p['cover_alt']) ?>" loading="lazy"></a>
     <?php endif; ?>
-    <p class="meta"><?= $e($date($p['published_at'])) ?><?= (string) $p['category'] !== '' ? ' · ' . $e($p['category']) : '' ?> · <?= $e($t('blog.read_minutes', ['n' => (int) $p['read_minutes']])) ?></p>
+    <p class="meta"><?= $e($date($p['published_at'] ?? $p['created_at'] ?? null)) ?><?= (string) $p['category'] !== '' ? ' · ' . $e($p['category']) : '' ?> · <?= $e($t('blog.read_minutes', ['n' => (int) $p['read_minutes']])) ?></p>
     <h2><a href="<?= $e($b->link('/' . rawurlencode((string) $p['slug']))) ?>"><?= $e($p['title']) ?></a></h2>
     <p><?= $e($p['excerpt']) ?></p>
   </article>

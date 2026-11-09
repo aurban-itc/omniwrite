@@ -12,8 +12,9 @@ use OmniWrite\Repository\DomainRepository;
 use PDO;
 
 /**
- * Eigene Domain pro Site. Ausgeliefert wird erst nach erfolgreicher DNS-Prüfung (CNAME auf das Portal oder gleiche IPv4-Adresse);
- * ein unverifizierter Eintrag schützt den Host nicht vor einem anderen Anspruch.
+ * Eigene Domain pro Site. Ausgeliefert wird erst nach erfolgreicher DNS-Prüfung: Inhaber-Nachweis per TXT-Eintrag (Token aus Site und Host,
+ * mit dem Master-Key signiert; ein CNAME auf das Portal allein beweist keine Inhaberschaft) plus Weg zum Portal (CNAME oder gleiche IPv4-Adresse).
+ * Ein unverifizierter Eintrag schützt den Host nicht vor einem anderen Anspruch.
  */
 final class DomainService
 {
@@ -22,6 +23,7 @@ final class DomainService
         private readonly AuditLogger $audit,
         private readonly DnsResolver $dns,
         private readonly string $portalHost,
+        private readonly string $secret = '',
     ) {
     }
 
@@ -60,6 +62,9 @@ final class DomainService
         if ($existing !== null && (int) $existing['site_id'] !== $s->id() && $existing['verified_at'] !== null) {
             throw new ValidationException(['domain' => 'err.domain_taken']);
         }
+        if ($existing !== null && (int) $existing['site_id'] === $s->id()) {
+            return; // unveränderter Host: bestehende Verifizierung bleibt erhalten
+        }
         try {
             $repo->replaceForSite($s->id(), $host);
         } catch (\PDOException $e) {
@@ -71,23 +76,41 @@ final class DomainService
         $this->audit->log('domain.set', $actor->id, $s->accountId(), ['site_id' => $s->id(), 'host' => $host], $ip);
     }
 
-    /** @return bool true, wenn der Host jetzt auf das Portal zeigt und verifiziert wurde */
-    public function verify(ResolvedSite $s, User $actor, ?string $ip = null): bool
+    /** TXT-Eintrag, mit dem der Domain-Inhaber nachweist, dass die Domain zu dieser Site gehört. @return array{name: string, value: string}|null */
+    public function challenge(ResolvedSite $s, string $host): ?array
+    {
+        if ($this->secret === '') {
+            return null;
+        }
+        $token = substr(hash_hmac('sha256', $s->id() . '|' . $host, $this->secret), 0, 32);
+        return ['name' => '_omniwrite.' . $host, 'value' => 'omniwrite-verify=' . $token];
+    }
+
+    /** @return string 'ok' (verifiziert), 'txt' (Inhaber-Nachweis fehlt) oder 'dns' (Domain zeigt nicht auf das Portal) */
+    public function verify(ResolvedSite $s, User $actor, ?string $ip = null): string
     {
         $this->requireOwner($s);
         $repo = new DomainRepository($this->pdo);
         $row = $repo->forSite($s->id()) ?? throw new ValidationException(['domain' => 'err.domain_missing']);
         $host = (string) $row['host'];
+        if ($row['verified_at'] !== null) {
+            return 'ok';
+        }
+        $challenge = $this->challenge($s, $host);
+        if ($challenge === null || !in_array($challenge['value'], $this->dns->txt($challenge['name']), true)) {
+            return 'txt';
+        }
         $ok = in_array($this->portalHost, $this->dns->cname($host), true);
         if (!$ok) {
             $mine = $this->dns->addresses($host);
             $ok = $mine !== [] && array_intersect($mine, $this->dns->addresses($this->portalHost)) !== [];
         }
-        if ($ok && $row['verified_at'] === null) {
-            $repo->markVerified($s->id(), gmdate('Y-m-d H:i:s'));
-            $this->audit->log('domain.verify', $actor->id, $s->accountId(), ['site_id' => $s->id(), 'host' => $host], $ip);
+        if (!$ok) {
+            return 'dns';
         }
-        return $ok;
+        $repo->markVerified($s->id(), gmdate('Y-m-d H:i:s'));
+        $this->audit->log('domain.verify', $actor->id, $s->accountId(), ['site_id' => $s->id(), 'host' => $host], $ip);
+        return 'ok';
     }
 
     public function remove(ResolvedSite $s, User $actor, ?string $ip = null): void

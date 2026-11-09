@@ -44,8 +44,8 @@ final class PublicBlogController
                 'headline' => (string) $post['title'],
                 'description' => (string) $post['meta_description'],
                 'image' => $image,
-                'datePublished' => $this->iso($post['published_at'] ?? null),
-                'dateModified' => $this->iso($post['updated_at'] ?? $post['published_at'] ?? null),
+                'datePublished' => $this->iso($post['published_at'] ?? $post['created_at'] ?? null),
+                'dateModified' => $this->iso($post['updated_at'] ?? $post['published_at'] ?? $post['created_at'] ?? null),
                 'mainEntityOfPage' => $b->abs('/' . $slug),
                 'inLanguage' => (string) $site['locale'],
                 'keywords' => (string) $post['keywords'],
@@ -66,8 +66,9 @@ final class PublicBlogController
             $posts = $this->blog->recent($site, \OmniWrite\Service\PublicBlogService::SITEMAP_MAX);
             $urls = '<url><loc>' . $this->x($b->abs('/')) . '</loc></url>';
             foreach ($posts as $p) {
+                $mod = $this->iso($p['updated_at'] ?? $p['published_at'] ?? $p['created_at'] ?? null);
                 $urls .= '<url><loc>' . $this->x($b->abs('/' . rawurlencode((string) $p['slug']))) . '</loc>'
-                    . '<lastmod>' . $this->x(substr((string) $this->iso($p['updated_at'] ?? $p['published_at'] ?? null), 0, 10)) . '</lastmod></url>';
+                    . ($mod !== null ? '<lastmod>' . $this->x(substr($mod, 0, 10)) . '</lastmod>' : '') . '</url>';
             }
             return Response::xml('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . $urls . '</urlset>');
         });
@@ -84,7 +85,7 @@ final class PublicBlogController
                     continue;
                 }
                 $link = $b->abs('/' . rawurlencode((string) $p['slug']));
-                $ts = strtotime((string) $p['published_at'] . ' UTC') ?: time();
+                $ts = strtotime((string) ($p['published_at'] ?? $p['created_at'] ?? '') . ' UTC') ?: 0;
                 $latest ??= $ts;
                 $body = str_replace(']]>', ']]]]><![CDATA[>', (string) $p['body_html']);
                 $items .= '<item><title>' . $this->x((string) $p['title']) . '</title><link>' . $this->x($link) . '</link>'

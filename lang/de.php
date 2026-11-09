@@ -205,4 +205,6 @@ return [
     'err.home_url_invalid' => 'Bitte eine https-Adresse angeben.',
     'err.short_too_long' => 'Der Text ist zu lang.',
     'post.view_live' => 'Ansehen',
+    'err.domain_txt' => 'Der Inhaber-Nachweis fehlt: Der TXT-Eintrag ist noch nicht im DNS zu sehen.',
+    'domain.txt_help' => 'Zum Nachweis, dass die Domain Ihnen gehört, legen Sie zusätzlich diesen TXT-Eintrag an:',
 ];

@@ -108,7 +108,7 @@ final class PostRepository extends SiteScopedRepository
     public function listPublished(int $limit, int $offset = 0): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, title, slug, excerpt, category, cover_image, cover_alt, read_minutes, published_at, updated_at FROM posts WHERE ' .
+            'SELECT id, title, slug, excerpt, category, cover_image, cover_alt, read_minutes, published_at, updated_at, created_at FROM posts WHERE ' .
             $this->scopedWhere("status = 'published'") . ' ORDER BY published_at DESC, id DESC LIMIT :limit OFFSET :offset'
         );
         $stmt->bindValue('site_id', $this->site->siteId, PDO::PARAM_INT);

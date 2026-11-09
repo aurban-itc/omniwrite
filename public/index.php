@@ -7,6 +7,7 @@ use OmniWrite\App;
 use OmniWrite\Core\Config;
 use OmniWrite\Core\Database;
 use OmniWrite\Http\HttpsPolicy;
+use OmniWrite\Repository\DomainRepository;
 use OmniWrite\Http\Request;
 
 try {
@@ -14,6 +15,18 @@ try {
     $baseUrl = (string) $config->get('app.base_url', '');
     $trustProxy = (bool) $config->get('app.trust_forwarded_proto', false);
     $target = HttpsPolicy::redirectTarget($_SERVER, $baseUrl, (bool) $config->get('app.force_https', true), $trustProxy);
+    $pdo = null;
+    if ($target !== null) {
+        // Eine verifizierte eigene Domain geht auf ihre eigene https-Adresse, nicht auf das Portal.
+        $host = strtolower((string) preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')));
+        if ($host !== '' && $host !== strtolower((string) parse_url($baseUrl, PHP_URL_HOST))) {
+            $pdo = Database::connect($config);
+            $site = (new DomainRepository($pdo))->verifiedSiteByHost($host);
+            if ($site !== null) {
+                $target = HttpsPolicy::customDomainTarget($_SERVER, $host, (bool) $config->get('app.force_https', true), $trustProxy);
+            }
+        }
+    }
     if ($target !== null) {
         header('Location: ' . $target, true, 301);
         exit;
@@ -23,7 +36,7 @@ try {
     session_name('omniwrite');
     session_set_cookie_params(['httponly' => true, 'secure' => $https, 'samesite' => 'Lax', 'path' => '/']);
     session_start();
-    $kernel = App::kernel(Database::connect($config), $config);
+    $kernel = App::kernel($pdo ?? Database::connect($config), $config);
     $kernel->handle(Request::fromGlobals($_SESSION))->send();
 } catch (Throwable $e) {
     error_log((string) $e);
