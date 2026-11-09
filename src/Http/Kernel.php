@@ -12,7 +12,9 @@ use OmniWrite\Service\PublicBlogService;
 final class Kernel
 {
     /** Pfade, die ein Superadmin ohne eingerichtete 2FA noch erreichen darf. */
-    private const OPEN_WITHOUT_2FA = ['/account/2fa', '/logout', '/health'];
+    private const OPEN_WITHOUT_2FA = ['/account/2fa', '/logout', '/health', '/robots.txt'];
+    /** Öffentliche Inhalte (Blog, API, Bilder) sehen alle gleich, auch ein Superadmin, dessen 2FA noch fehlt. */
+    private const PUBLIC_PREFIXES = ['/b/', '/api/v1/', '/media/'];
 
     public function __construct(
         private readonly Router $router,
@@ -101,6 +103,17 @@ final class Kernel
         $user = $request->user;
         return $user !== null && $request->impersonator === null
             && $this->twoFactor->isRequired($user) && !$this->twoFactor->isEnabled($user)
-            && !in_array($request->path, self::OPEN_WITHOUT_2FA, true);
+            && !in_array($request->path, self::OPEN_WITHOUT_2FA, true)
+            && !$this->isPublicContent($request->path);
+    }
+
+    private function isPublicContent(string $path): bool
+    {
+        foreach (self::PUBLIC_PREFIXES as $prefix) {
+            if (str_starts_with($path, $prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -7,6 +7,7 @@ use OmniWrite\Http\Request;
 use OmniWrite\Http\Response;
 use OmniWrite\Service\BlogView;
 use OmniWrite\Service\PublicBlogService;
+use OmniWrite\Support\Html;
 
 /**
  * Öffentliche, schreibgeschützte JSON-API: nur veröffentlichte Beiträge, für jede Herkunft lesbar (CORS *, keine Cookies).
@@ -43,7 +44,7 @@ final class PublicApiController
                 'post' => $this->summary($post, $b) + [
                     'meta_description' => (string) $post['meta_description'],
                     'keywords' => (string) $post['keywords'],
-                    'body_html' => (string) $post['body_html'], // beim Speichern per Allowlist gesäubert
+                    'body_html' => Html::absolutize((string) $post['body_html'], $b->origin, $b->abs('/' . rawurlencode((string) $post['slug'])), $b->abs('/')), // gesäubert, mit absoluten Adressen
                 ],
             ]);
         });

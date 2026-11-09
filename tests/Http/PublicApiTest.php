@@ -121,4 +121,31 @@ final class PublicApiTest extends KernelTestCase
         $this->sessionData = [];
         $this->call('POST', '/login', ['email' => 'owner@example.com', 'password' => 'some long password']);
     }
+
+    public function testBodyLinksAndImagesInTheApiAreAbsolute(): void
+    {
+        $this->posts->insert([
+            'title' => 'Mit Links', 'slug' => 'mit-links', 'status' => 'published', 'published_at' => '2026-03-04 10:00:00', 'read_minutes' => 1,
+            'body_html' => '<p><a href="/kontakt">Kontakt</a> <a href="#fussnote">Anker</a> <a href="https://x.example/a">Extern</a> <a href="mailto:a@b.de">Mail</a> <a href="seite-2">Relativ</a><img src="/media/1/ab12cd34ef567890.webp" alt="x"></p>',
+        ]);
+        $body = $this->json('/api/v1/sites/alpha/posts/mit-links')['post']['body_html'];
+        self::assertStringContainsString('href="https://omniwrite.example/kontakt"', $body);
+        self::assertStringContainsString('href="https://omniwrite.example/b/alpha/mit-links#fussnote"', $body);
+        self::assertStringContainsString('href="https://x.example/a"', $body);
+        self::assertStringContainsString('href="mailto:a@b.de"', $body);
+        self::assertStringContainsString('href="https://omniwrite.example/b/alpha/seite-2"', $body);
+        self::assertStringContainsString('src="https://omniwrite.example/media/1/ab12cd34ef567890.webp"', $body);
+    }
+
+    public function testSuperadminWithoutTwoFactorStillGetsPublicContent(): void
+    {
+        $this->post('Erster Beitrag');
+        $this->createUser('root@example.com', 'some long password', true);
+        $this->sessionData = [];
+        $this->call('POST', '/login', ['email' => 'root@example.com', 'password' => 'some long password']);
+        self::assertSame('/account/2fa', $this->call('GET', '/admin')->headers['Location'] ?? null); // Gate greift weiter
+        self::assertSame(200, $this->call('GET', '/api/v1/sites/alpha/posts')->status);
+        self::assertSame(200, $this->call('GET', '/b/alpha')->status);
+        self::assertSame(200, $this->call('GET', '/b/alpha/erster-beitrag')->status);
+    }
 }
