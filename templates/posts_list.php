@@ -11,7 +11,8 @@
 <?php foreach ($posts as $p): ?>
   <div class="card">
     <a href="<?= $e($base) ?>/posts/<?= (int) $p['id'] ?>"><strong><?= $e($p['title']) ?></strong></a>
-    <span class="pill <?= $e($p['status']) ?>"><?= $e($t('status.' . $p['status'])) ?></span><br>
+    <span class="pill <?= $e($p['status']) ?>"><?= $e($t('status.' . $p['status'])) ?></span>
+    <?php if ($p['status'] === 'published'): ?><a href="/b/<?= $e(rawurlencode((string) $site['slug'])) ?>/<?= $e(rawurlencode((string) $p['slug'])) ?>" target="_blank" rel="noopener"><?= $e($t('post.view_live')) ?></a><?php endif; ?><br>
     <small><?= $e($p['slug']) ?> · <?= (int) $p['read_minutes'] ?> min<?= $p['category'] !== '' ? ' · ' . $e($p['category']) : '' ?>
     <?= !empty($p['published_at']) ? ' · ' . $e(substr((string) $p['published_at'], 0, 10)) : '' ?></small>
   </div>

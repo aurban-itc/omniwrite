@@ -6,6 +6,7 @@ namespace OmniWrite\Http;
 use OmniWrite\Auth\AuditLogger;
 use OmniWrite\Auth\TwoFactorService;
 use OmniWrite\Repository\UserRepository;
+use OmniWrite\Service\PublicBlogService;
 
 /** Request-Pipeline: Nutzer laden, Impersonation und 2FA-Pflicht prüfen, Locale, CSRF, Router. */
 final class Kernel
@@ -20,11 +21,22 @@ final class Kernel
         private readonly TwoFactorService $twoFactor,
         private readonly AuditLogger $audit,
         private readonly string $defaultLocale = 'de',
+        private readonly ?PublicBlogService $publicBlog = null,
+        private readonly ?Router $publicRouter = null,
+        private readonly string $portalHost = '',
     ) {
     }
 
     public function handle(Request $request): Response
     {
+        // Eine verifizierte eigene Domain liefert ausschließlich das öffentliche Blog aus, nie Login oder Backend.
+        if ($this->publicBlog !== null && $this->publicRouter !== null && $request->host !== '' && $request->host !== $this->portalHost) {
+            $site = $this->publicBlog->siteByHost($request->host);
+            if ($site !== null) {
+                $request->publicSite = $site;
+                return $this->publicRouter->dispatch($request);
+            }
+        }
         $this->audit->setImpersonator(null); // pro Request neu bestimmen
         $this->loadUser($request);
 

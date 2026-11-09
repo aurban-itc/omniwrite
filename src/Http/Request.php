@@ -11,6 +11,8 @@ final class Request
     /** Echter Superadmin, solange er als anderer Nutzer eingeloggt ist (Impersonation). */
     public ?User $impersonator = null;
     public string $locale = 'de';
+    /** Site, die über eine verifizierte eigene Domain angesprochen wird (setzt der Kernel). @var array<string, mixed>|null */
+    public ?array $publicSite = null;
     /** @var array<string, string> Pfadparameter aus dem Router, z. B. {id}. */
     public array $params = [];
 
@@ -26,6 +28,8 @@ final class Request
         public readonly Session $session,
         public readonly string $ip = '0.0.0.0',
         public readonly bool $https = false,
+        /** Host des Aufrufs, kleingeschrieben und ohne Port; leer = unbekannt (dann gilt das Portal). */
+        public readonly string $host = '',
     ) {
     }
 
@@ -42,6 +46,7 @@ final class Request
             new Session($session),
             (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'),
             $https,
+            strtolower((string) preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? ''))),
         );
     }
 
