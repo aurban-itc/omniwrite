@@ -88,6 +88,26 @@ final class AiFlowTest extends KernelTestCase
         self::assertStringContainsString('Idee 1', $this->call('GET', '/sites/alpha/topics')->body);
     }
 
+    public function testEditorButtonsAreDisabledWithoutKeys(): void
+    {
+        $this->login('owner@example.com');
+        $res = $this->call('POST', '/sites/alpha/posts', ['title' => 'X', 'body_html' => '<p>a</p>']);
+        $path = strtok((string) $res->headers['Location'], '?');
+        $with = $this->call('GET', $path)->body;
+        self::assertDoesNotMatchRegularExpression('/id="ai-run"[^>]*disabled/', $with);
+
+        $kernel = \OmniWrite\App::kernel($this->pdo, new \OmniWrite\Core\Config([
+            'security' => ['master_key' => base64_encode(str_repeat('k', 32))], 'storage' => ['path' => $this->storageDir],
+        ]), null, $this->http);
+        $this->kernel = $kernel;
+        $this->sessionData = [];
+        $this->login('owner@example.com');
+        $without = $this->call('GET', $path)->body;
+        foreach (['ai-run', 'ai-seo', 'img-gen'] as $id) {
+            self::assertMatchesRegularExpression('/id="' . $id . '"[^>]*disabled/', $without, $id);
+        }
+    }
+
     public function testMediaRejectsBadPathsAndUnknownFiles(): void
     {
         foreach (['/media/1/..%2Fx.webp', '/media/1/notahash.webp', '/media/1/0123456789abcdef.webp', '/media/abc/0123456789abcdef.png'] as $p) {

@@ -33,9 +33,9 @@ $err = static fn (string $k): string => isset($errors[$k]) ? '<p class="err">' .
   <div class="card">
     <label for="ai-instr"><?= $e($t('ai.revise_label')) ?></label>
     <input id="ai-instr" maxlength="400" placeholder="<?= $e($t('ai.revise_hint')) ?>">
-    <button type="button" id="ai-run"><?= $e($t('ai.revise_btn')) ?></button>
+    <button type="button" id="ai-run"<?= empty($textReady) ? ' disabled' : '' ?>><?= $e($t('ai.revise_btn')) ?></button>
     <button type="button" id="ai-undo" hidden><?= $e($t('ai.undo_btn')) ?></button>
-    <button type="button" id="ai-seo"><?= $e($t('ai.seo_btn')) ?></button>
+    <button type="button" id="ai-seo"<?= empty($textReady) ? ' disabled' : '' ?>><?= $e($t('ai.seo_btn')) ?></button>
     <small id="ai-msg"></small>
   </div>
   <details open><summary><?= $e($t('post.seo')) ?></summary>
@@ -54,7 +54,7 @@ $err = static fn (string $k): string => isset($errors[$k]) ? '<p class="err">' .
     <?= $err('cover_image') ?>
     <label for="image_prompt"><?= $e($t('ai.image_prompt')) ?></label>
     <textarea id="image_prompt" name="image_prompt" rows="2" maxlength="1000"><?= $e($v('image_prompt')) ?></textarea>
-    <button type="button" id="img-gen"><?= $e($t('ai.image_btn')) ?></button> <small id="img-msg"></small>
+    <button type="button" id="img-gen"<?= empty($imageReady) ? ' disabled' : '' ?>><?= $e($t('ai.image_btn')) ?></button> <small id="img-msg"></small>
     <label for="cover_alt"><?= $e($t('post.cover_alt')) ?></label>
     <input id="cover_alt" name="cover_alt" maxlength="255" value="<?= $e($v('cover_alt')) ?>">
   </details>

@@ -92,7 +92,6 @@ final class App
         $postService = new PostService($pdo, $audit);
         $topicService = new TopicService($pdo, $audit);
         $settingsService = new SiteSettingsService($pdo, $audit);
-        $postC = new PostController($siteAccess, $view, $postService);
         $topicC = new TopicController($siteAccess, $view, $topicService);
         $settingsC = new SiteSettingsController($siteAccess, $view, $settingsService);
 
@@ -113,6 +112,7 @@ final class App
             ),
             $store, $postService, $topicService, $settingsService, $usage,
         );
+        $postC = new PostController($siteAccess, $view, $postService, $ai);
         $aiC = new AiController($siteAccess, $view, $translator, $ai, $topicService, $usage);
         $mediaC = new MediaController($store);
 

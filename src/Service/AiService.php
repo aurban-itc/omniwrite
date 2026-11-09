@@ -81,7 +81,11 @@ final class AiService
             throw $e;
         }
         if ($topicId > 0) {
-            $this->topics->markUsed($s, $topicId, false);
+            try {
+                $this->topics->markUsed($s, $topicId, false);
+            } catch (\OmniWrite\Domain\NotFoundException) {
+                // Thema wurde während der Erzeugung gelöscht: der fertige Entwurf bleibt erreichbar.
+            }
         }
         $this->audit->log('ai.generate_post', $actor->id, $s->accountId(), ['site_id' => $s->id(), 'post_id' => $postId], $ip);
         return $postId;

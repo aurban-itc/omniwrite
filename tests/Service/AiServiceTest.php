@@ -82,6 +82,16 @@ final class AiServiceTest extends DbTestCase
         return (int) $this->pdo->query("SELECT COALESCE(SUM(quantity),0) FROM usage_events WHERE site_id = {$s->id()} AND kind = '$kind'")->fetchColumn();
     }
 
+    public function testTopicDeletedDuringGenerationStillReturnsTheDraft(): void
+    {
+        [$u, $s] = $this->owner();
+        $topicId = $this->topics->add($s, $u, ['title' => 'Thema A']);
+        $this->http->pushToolUse(FakeHttpClient::post());
+        $this->http->onRequest = fn () => $this->topics->delete($s, $u, $topicId);
+        $postId = $this->ai->generateDraft($s, $u, ['topic_id' => (string) $topicId]);
+        self::assertGreaterThan(0, $postId);
+    }
+
     public function testGenerateDraftCreatesUnpublishedPostAndCountsUsage(): void
     {
         [$u, $s] = $this->owner();

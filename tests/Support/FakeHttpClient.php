@@ -12,6 +12,8 @@ final class FakeHttpClient implements HttpClient
     private array $queue = [];
     /** @var list<array{url: string, headers: array<string, string>, json: string}> */
     public array $requests = [];
+    /** Wird bei jeder Anfrage aufgerufen (z. B. um Daten „während des Aufrufs“ zu ändern). */
+    public ?\Closure $onRequest = null;
 
     public function push(int $status, string $body): self
     {
@@ -33,6 +35,9 @@ final class FakeHttpClient implements HttpClient
     public function postJson(string $url, array $headers, string $json, int $timeoutSeconds): array
     {
         $this->requests[] = ['url' => $url, 'headers' => $headers, 'json' => $json];
+        if ($this->onRequest !== null) {
+            ($this->onRequest)();
+        }
         return array_shift($this->queue) ?? ['status' => 0, 'body' => ''];
     }
 
