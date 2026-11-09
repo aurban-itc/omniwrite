@@ -60,6 +60,13 @@ $err = static fn (string $k): string => isset($errors[$k]) ? '<p class="err">' .
   </details>
   <button><?= $e($t('btn.save')) ?></button>
 </form>
+<?php if ($id && $status !== 'published' && $rs->canWrite()): ?>
+<form method="post" action="<?= $e($base) ?>/posts/<?= (int) $id ?>/send-review" class="card">
+  <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+  <p><?= $e($t('review.send_hint')) ?></p>
+  <button><?= $e($t('review.send_btn')) ?></button>
+</form>
+<?php endif; ?>
 <?php else: ?>
   <div class="card"><?= \OmniWrite\Support\Html::sanitize($v('body_html')) ?></div>
 <?php endif; ?>

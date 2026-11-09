@@ -35,6 +35,7 @@ return [
         // Bilder (KI-generiert). Außerhalb von public/ ablegen; muss für PHP beschreibbar sein.
         // 'path' => __DIR__ . '/../storage',
     ],
+    // 'review' => ['link_hours' => 72],   // Gültigkeit der Links in der Review-Mail
     'mail' => [
         'resend_api_key' => '',
         'from'           => 'OmniWrite <noreply@urbanlabs.ai>',

@@ -3,5 +3,7 @@
 <p>
   <a href="/sites/<?= $e($site['slug']) ?>/posts"><?= $e($t('site.posts')) ?></a> ·
   <a href="/sites/<?= $e($site['slug']) ?>/topics"><?= $e($t('site.topics')) ?></a> ·
+  <a href="/sites/<?= $e($site['slug']) ?>/recipients"><?= $e($t('site.recipients')) ?></a> ·
+  <a href="/sites/<?= $e($site['slug']) ?>/schedule"><?= $e($t('site.schedule')) ?></a> ·
   <a href="/sites/<?= $e($site['slug']) ?>/settings"><?= $e($t('site.settings')) ?></a>
 </p>
