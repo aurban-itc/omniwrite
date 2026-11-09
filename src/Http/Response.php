@@ -35,6 +35,20 @@ final class Response
         return new self($status, ['Content-Type' => 'application/json'], json_encode($data, JSON_THROW_ON_ERROR));
     }
 
+    public static function xml(string $body, int $status = 200, string $type = 'application/xml'): self
+    {
+        return new self($status, [
+            'Content-Type' => $type . '; charset=utf-8', 'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'public, max-age=300',
+        ], $body);
+    }
+
+    /** @param array<string, string> $headers ersetzt/ergänzt Header */
+    public function withHeaders(array $headers): self
+    {
+        return new self($this->status, $headers + $this->headers, $this->body);
+    }
+
     public static function redirect(string $location, int $status = 303): self
     {
         return new self($status, ['Location' => $location], '');

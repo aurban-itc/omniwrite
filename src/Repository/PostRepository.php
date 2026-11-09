@@ -104,6 +104,35 @@ final class PostRepository extends SiteScopedRepository
         return $stmt->rowCount() > 0;
     }
 
+    /** @return list<array<string, mixed>> veröffentlichte Beiträge ohne Volltext, neueste zuerst */
+    public function listPublished(int $limit, int $offset = 0): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT id, title, slug, excerpt, category, cover_image, cover_alt, read_minutes, published_at, updated_at FROM posts WHERE ' .
+            $this->scopedWhere("status = 'published'") . ' ORDER BY published_at DESC, id DESC LIMIT :limit OFFSET :offset'
+        );
+        $stmt->bindValue('site_id', $this->site->siteId, PDO::PARAM_INT);
+        $stmt->bindValue('limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function countPublished(): int
+    {
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM posts WHERE ' . $this->scopedWhere("status = 'published'"));
+        $stmt->execute(['site_id' => $this->site->siteId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /** @return array<string, mixed>|null */
+    public function findPublishedBySlug(string $slug): ?array
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM posts WHERE ' . $this->scopedWhere("status = 'published' AND slug = :slug"));
+        $stmt->execute(['site_id' => $this->site->siteId, 'slug' => $slug]);
+        return $stmt->fetch() ?: null;
+    }
+
     public function slugTaken(string $slug, int $exceptId = 0): bool
     {
         $stmt = $this->pdo->prepare('SELECT 1 FROM posts WHERE ' . $this->scopedWhere('slug = :slug AND id <> :id'));

@@ -29,6 +29,7 @@ abstract class KernelTestCase extends DbTestCase
     private string $masterKey;
     protected FakeHttpClient $http;
     protected FakeMailer $mailer;
+    protected FakeDnsResolver $dns;
     protected string $storageDir;
 
     protected function setUp(): void
@@ -39,6 +40,7 @@ abstract class KernelTestCase extends DbTestCase
         $this->accounts = new AccountRepository($this->pdo);
         $this->http = new FakeHttpClient();
         $this->mailer = new FakeMailer();
+        $this->dns = new FakeDnsResolver();
         $this->storageDir = sys_get_temp_dir() . '/omniwrite-test-' . bin2hex(random_bytes(4));
         $this->kernel = App::kernel($this->pdo, new Config([
             'auth' => ['registration' => 'approval'],
@@ -46,7 +48,7 @@ abstract class KernelTestCase extends DbTestCase
             'ai' => ['anthropic_api_key' => 'test-anthropic', 'openai_api_key' => 'test-openai'],
             'storage' => ['path' => $this->storageDir],
                     'app' => ['base_url' => 'https://omniwrite.example'],
-        ]), null, $this->http, $this->mailer);
+        ]), null, $this->http, $this->mailer, $this->dns);
     }
 
     protected function tearDown(): void
@@ -61,7 +63,7 @@ abstract class KernelTestCase extends DbTestCase
     }
 
     /** @param array<string, mixed> $post */
-    protected function call(string $method, string $path, array $post = [], bool $csrf = true): Response
+    protected function call(string $method, string $path, array $post = [], bool $csrf = true, string $host = ''): Response
     {
         $session = new Session($this->sessionData);
         if ($method === 'POST' && $csrf) {
@@ -72,7 +74,7 @@ abstract class KernelTestCase extends DbTestCase
             [$path, $qs] = explode('?', $path, 2);
             parse_str($qs, $query);
         }
-        return $this->kernel->handle(new Request($method, $path, $query, $post, $session, '9.9.9.9'));
+        return $this->kernel->handle(new Request($method, $path, $query, $post, $session, '9.9.9.9', false, $host));
     }
 
     protected function token(): string

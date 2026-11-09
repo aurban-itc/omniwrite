@@ -32,6 +32,29 @@ final class View
         return Response::html($page, $status);
     }
 
+    /**
+     * Öffentliche Blog-Seite (templates/public/<name>.php in templates/public/layout.php), ohne Portal-Navigation.
+     * Bilder dürfen von https-Adressen kommen; Skripte bleiben verboten.
+     *
+     * @param array<string, mixed> $data
+     */
+    public function renderPublic(Request $request, string $template, array $data = [], int $status = 200): Response
+    {
+        $locale = $request->locale;
+        $vars = $data + [
+            'locale' => $locale,
+            'e' => static fn (mixed $s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
+            't' => fn (string $key, array $p = []): string => $this->translator->t($locale, $key, $p),
+        ];
+        $content = $this->capture($this->dir . '/public/' . $template . '.php', $vars);
+        $page = $this->capture($this->dir . '/public/layout.php', $vars + ['content' => $content]);
+        return Response::html($page, $status)->withHeaders([
+            'Content-Security-Policy' => "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+            'Referrer-Policy' => 'strict-origin-when-cross-origin',
+            'Cache-Control' => 'public, max-age=300',
+        ]);
+    }
+
     /** @param array<string, mixed> $vars */
     private function capture(string $file, array $vars): string
     {

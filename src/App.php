@@ -17,7 +17,9 @@ use OmniWrite\Auth\TwoFactorService;
 use OmniWrite\Core\Config;
 use OmniWrite\Http\Controller\AdminController;
 use OmniWrite\Http\Controller\AiController;
+use OmniWrite\Http\Controller\BlogSettingsController;
 use OmniWrite\Http\Controller\MediaController;
+use OmniWrite\Http\Controller\PublicBlogController;
 use OmniWrite\Http\Controller\AuthController;
 use OmniWrite\Http\Controller\DashboardController;
 use OmniWrite\Http\Controller\ImpersonationController;
@@ -40,7 +42,12 @@ use OmniWrite\Http\Controller\ReviewPageController;
 use OmniWrite\Http\Controller\ScheduleController;
 use OmniWrite\Mail\Mailer;
 use OmniWrite\Mail\ResendMailer;
+use OmniWrite\Net\DnsResolver;
+use OmniWrite\Net\SystemDnsResolver;
 use OmniWrite\Service\AiService;
+use OmniWrite\Service\BlogSettingsService;
+use OmniWrite\Service\DomainService;
+use OmniWrite\Service\PublicBlogService;
 use OmniWrite\Service\RecipientService;
 use OmniWrite\Service\ReviewService;
 use OmniWrite\Service\ScheduleService;
@@ -72,7 +79,7 @@ final class App
     }
 
     /** @param ?HttpClient $http Transport für KI-Anbieter und Mail (Tests liefern ein Fake); $mailer überschreibt den Mailversand */
-    public static function kernel(PDO $pdo, Config $config, ?string $root = null, ?HttpClient $http = null, ?Mailer $mailer = null): Kernel
+    public static function kernel(PDO $pdo, Config $config, ?string $root = null, ?HttpClient $http = null, ?Mailer $mailer = null, ?DnsResolver $dns = null): Kernel
     {
         $root ??= dirname(__DIR__);
         $users = new UserRepository($pdo);
@@ -122,7 +129,37 @@ final class App
         $reviewC = new ReviewController($siteAccess, $review);
         $reviewPageC = new ReviewPageController($view, $review);
 
+        $baseUrl = (string) $config->get('app.base_url', '');
+        $portalHost = strtolower((string) parse_url($baseUrl, PHP_URL_HOST));
+        $blogSettings = new BlogSettingsService($pdo, $audit);
+        $domains = new DomainService($pdo, $audit, $dns ?? new SystemDnsResolver(), $portalHost);
+        $publicBlog = new PublicBlogService($pdo, $blogSettings, $baseUrl);
+        $publicC = new PublicBlogController($view, $publicBlog);
+        $blogC = new BlogSettingsController($siteAccess, $view, $blogSettings, $domains, $baseUrl, $portalHost);
+
+        // Öffentliche Routen: am Portal unter /b/<site>, auf einer eigenen Domain an der Wurzel.
+        $publicRouter = new Router();
+        $publicRouter->add('GET', '/', $publicC->index(...));
+        $publicRouter->add('GET', '/sitemap.xml', $publicC->sitemap(...));
+        $publicRouter->add('GET', '/feed.xml', $publicC->feed(...));
+        $publicRouter->add('GET', '/llms.txt', $publicC->llms(...));
+        $publicRouter->add('GET', '/robots.txt', $publicC->robots(...));
+        $publicRouter->add('GET', '/media/{site}/{file}', $mediaC->show(...));
+        $publicRouter->add('GET', '/{post}', $publicC->post(...));
+
         $router = new Router();
+        $router->add('GET', '/robots.txt', $publicC->robots(...));
+        $router->add('GET', '/b/{site}', $publicC->index(...));
+        $router->add('GET', '/b/{site}/', $publicC->index(...));
+        $router->add('GET', '/b/{site}/sitemap.xml', $publicC->sitemap(...));
+        $router->add('GET', '/b/{site}/feed.xml', $publicC->feed(...));
+        $router->add('GET', '/b/{site}/llms.txt', $publicC->llms(...));
+        $router->add('GET', '/b/{site}/{post}', $publicC->post(...));
+        $router->add('GET', '/sites/{slug}/blog', $blogC->form(...), 'user');
+        $router->add('POST', '/sites/{slug}/blog', $blogC->save(...), 'user');
+        $router->add('POST', '/sites/{slug}/blog/domain', $blogC->setDomain(...), 'user');
+        $router->add('POST', '/sites/{slug}/blog/domain/verify', $blogC->verifyDomain(...), 'user');
+        $router->add('POST', '/sites/{slug}/blog/domain/remove', $blogC->removeDomain(...), 'user');
         $router->add('GET', '/health', static fn (): Response => Response::json(['status' => 'ok']));
         $router->add('GET', '/', static fn (): Response => Response::redirect('/dashboard'));
         $router->add('GET', '/login', $authC->loginForm(...));
@@ -170,7 +207,7 @@ final class App
         $router->add('GET', '/admin', $admin->index(...), 'superadmin');
         $router->add('POST', '/admin/users/{id}/activate', $admin->activate(...), 'superadmin');
 
-        return new Kernel($router, $users, $csrf, $twoFactor, $audit, (string) $config->get('app.default_locale', 'de'));
+        return new Kernel($router, $users, $csrf, $twoFactor, $audit, (string) $config->get('app.default_locale', 'de'), $publicBlog, $publicRouter, $portalHost);
     }
 
     private static function buildAi(PDO $pdo, Config $config, AuditLogger $audit, HttpClient $http, ImageStore $store, PostService $postService, TopicService $topicService, SiteSettingsService $settingsService, UsageService $usage): AiService
