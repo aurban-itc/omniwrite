@@ -35,6 +35,12 @@ final class QrCode
         $this->reserved = $this->modules;
     }
 
+    /** Passt der Text in die größte unterstützte Version? Aufrufer können sonst auf die manuelle Eingabe ausweichen. */
+    public static function fits(string $text): bool
+    {
+        return strlen($text) <= 213;
+    }
+
     /** @return list<list<bool>> Modul-Matrix (true = dunkel). */
     public static function matrix(string $text): array
     {

@@ -24,6 +24,12 @@ final class QrCodeTest extends TestCase
         QrCode::matrix(str_repeat('a', 214));
     }
 
+    public function testFitsMatchesEncoderLimit(): void
+    {
+        self::assertTrue(QrCode::fits(str_repeat('a', 213)));
+        self::assertFalse(QrCode::fits(str_repeat('a', 214)));
+    }
+
     public function testFinderPatternsAndTimingArePresent(): void
     {
         $m = QrCode::matrix(self::URI);
