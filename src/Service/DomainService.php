@@ -93,12 +93,12 @@ final class DomainService
         $repo = new DomainRepository($this->pdo);
         $row = $repo->forSite($s->id()) ?? throw new ValidationException(['domain' => 'err.domain_missing']);
         $host = (string) $row['host'];
-        if ($row['verified_at'] !== null) {
-            return 'ok';
-        }
-        $challenge = $this->challenge($s, $host);
-        if ($challenge === null || !in_array($challenge['value'], $this->dns->txt($challenge['name']), true)) {
-            return 'txt';
+        $verified = $row['verified_at'] !== null;
+        if (!$verified) { // der Inhaber-Nachweis gilt einmal; danach prüft "DNS prüfen" nur noch den Weg zum Portal
+            $challenge = $this->challenge($s, $host);
+            if ($challenge === null || !in_array($challenge['value'], $this->dns->txt($challenge['name']), true)) {
+                return 'txt';
+            }
         }
         $ok = in_array($this->portalHost, $this->dns->cname($host), true);
         if (!$ok) {
@@ -107,6 +107,9 @@ final class DomainService
         }
         if (!$ok) {
             return 'dns';
+        }
+        if ($verified) {
+            return 'ok';
         }
         $repo->markVerified($s->id(), gmdate('Y-m-d H:i:s'));
         $this->audit->log('domain.verify', $actor->id, $s->accountId(), ['site_id' => $s->id(), 'host' => $host], $ip);

@@ -326,4 +326,15 @@ final class PublicBlogTest extends KernelTestCase
         self::assertStringContainsString('Thu, 02 Jan 2025 03:04:05', $this->call('GET', '/b/alpha/feed.xml')->body);
         self::assertSame(200, $this->call('GET', '/b/alpha/altbestand')->status);
     }
+
+    public function testCheckDnsReportsAVerifiedDomainThatNoLongerPointsHere(): void
+    {
+        $this->call('POST', '/sites/alpha/blog/domain', ['domain' => 'blog.beispiel.de']);
+        $this->dns->cnames['blog.beispiel.de'] = ['omniwrite.example'];
+        $this->proveOwnership('alpha', 'blog.beispiel.de');
+        self::assertStringContainsString('domain_verified', (string) $this->call('POST', '/sites/alpha/blog/domain/verify')->headers['Location']);
+        $this->dns->cnames['blog.beispiel.de'] = ['anderer-dienst.example'];
+        self::assertStringContainsString('domain_dns', (string) $this->call('POST', '/sites/alpha/blog/domain/verify')->headers['Location']);
+        self::assertNotNull((new DomainRepository($this->pdo))->forSite($this->siteId)['verified_at']); // bleibt verifiziert
+    }
 }
