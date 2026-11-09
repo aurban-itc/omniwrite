@@ -46,20 +46,12 @@ final class Migrator
         return $applied;
     }
 
-    /**
-     * PDO meldet bei exec() mit mehreren Statements nur den Fehler des ersten. nextRowset() holt die
-     * übrigen Ergebnisse ab und wirft bei einem Fehler, sonst würde eine halb gelaufene Datei verbucht.
-     */
+    /** Jedes Statement einzeln: funktioniert auch bei Hostern, die Mehrfach-Statements pro Abfrage verbieten, und Fehler bleiben eindeutig. */
     private function run(string $sql): void
     {
-        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) !== 'mysql') {
-            $this->pdo->exec($sql);
-            return;
+        foreach (SqlSplitter::split($sql) as $statement) {
+            $this->pdo->exec($statement);
         }
-        $stmt = $this->pdo->query($sql);
-        do {
-            // Ergebnisse verwerfen; Fehler werfen hier.
-        } while ($stmt->nextRowset());
     }
 
     /** @param array<string, int> $done @return array<string, string> name => Pfad */
