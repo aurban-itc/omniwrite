@@ -8,6 +8,7 @@ use OmniWrite\App;
 use OmniWrite\Core\Config;
 use OmniWrite\Core\Migrator;
 use OmniWrite\Domain\ValidationException;
+use OmniWrite\Repository\UserRepository;
 use PDO;
 use Throwable;
 
@@ -67,28 +68,23 @@ final class SetupPage
     /** @param array<string, mixed> $post @return array{status: int, html: string} */
     private function createSuperadmin(PDO $pdo, array $post): array
     {
-        if ($this->hasSuperadmin($pdo)) {
-            return $this->page(409, $this->box('Es gibt schon einen Superadmin. Weitere werden hier nicht angelegt.', true));
-        }
-        try {
-            $user = App::buildAuth($pdo, $this->config)->createSuperadmin(
-                trim((string) ($post['email'] ?? '')),
-                trim((string) ($post['name'] ?? '')) ?: 'Superadmin',
-                (string) ($post['password'] ?? ''),
-            );
-        } catch (ValidationException $e) {
-            return $this->page(422, $this->box('Eingabe ungültig: ' . implode(', ', array_values($e->errors)), true));
-        }
-        return $this->page(200, $this->box('Superadmin angelegt: ' . $user->email . '. Bitte jetzt `setup.token` aus config/config.php entfernen und anmelden; 2FA ist für Superadmins Pflicht.', false));
-    }
-
-    private function hasSuperadmin(PDO $pdo): bool
-    {
-        try {
-            return (int) $pdo->query('SELECT COUNT(*) FROM users WHERE is_superadmin = 1')->fetchColumn() > 0;
-        } catch (Throwable) {
-            return false; // Tabelle fehlt noch: erst migrieren
-        }
+        $users = new UserRepository($pdo);
+        // Prüfen und Anlegen unter einer Sperre: zwei gleichzeitige Anfragen können nicht beide "noch keiner" sehen.
+        return $users->withLock('omniwrite_setup_superadmin', function () use ($pdo, $users, $post): array {
+            if ($users->hasSuperadmin()) {
+                return $this->page(409, $this->box('Es gibt schon einen Superadmin. Weitere werden hier nicht angelegt.', true));
+            }
+            try {
+                $user = App::buildAuth($pdo, $this->config)->createSuperadmin(
+                    trim((string) ($post['email'] ?? '')),
+                    trim((string) ($post['name'] ?? '')) ?: 'Superadmin',
+                    (string) ($post['password'] ?? ''),
+                );
+            } catch (ValidationException $e) {
+                return $this->page(422, $this->box('Eingabe ungültig: ' . implode(', ', array_values($e->errors)), true));
+            }
+            return $this->page(200, $this->box('Superadmin angelegt: ' . $user->email . '. Bitte jetzt `setup.token` aus config/config.php entfernen und anmelden; 2FA ist für Superadmins Pflicht.', false));
+        });
     }
 
     private function box(string $text, bool $error): string
