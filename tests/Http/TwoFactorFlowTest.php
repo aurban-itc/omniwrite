@@ -28,6 +28,8 @@ final class TwoFactorFlowTest extends KernelTestCase
         $page = $this->call('GET', '/account/2fa');
         preg_match('#<code>([A-Z2-7]{32})</code>#', $page->body, $m);
         self::assertNotEmpty($m, 'Secret wird angezeigt');
+        self::assertStringContainsString('<svg ', $page->body, 'QR-Code wird serverseitig inline gerendert');
+        self::assertStringNotContainsString('<img', $page->body, 'kein externer QR-Dienst');
         $secret = $m[1];
 
         $wrong = $this->call('POST', '/account/2fa', ['code' => '000000']);
