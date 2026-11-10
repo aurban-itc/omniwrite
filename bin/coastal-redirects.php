@@ -41,5 +41,8 @@ $out[] = '  RewriteRule ^insights/?$ ' . $base . '/? [R=301,L,NC]';
 $out[] = '  # insights:end';
 echo implode("\n", $out), "\n";
 if ($indexOut) {
-    file_put_contents($indexOut, json_encode($index, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+    if (@file_put_contents($indexOut, json_encode($index, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)) === false) {
+        fwrite(STDERR, "Index-Datei konnte nicht geschrieben werden: $indexOut\n");
+        exit(1);
+    }
 }
