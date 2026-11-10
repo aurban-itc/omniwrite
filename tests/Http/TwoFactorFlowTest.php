@@ -20,6 +20,18 @@ final class TwoFactorFlowTest extends KernelTestCase
         self::assertSame(200, $this->call('GET', '/health')->status);
     }
 
+    public function testSetupPageWorksWithoutQrWhenEmailIsTooLongForIt(): void
+    {
+        $email = str_repeat('a', 64) . '@' . str_repeat('b', 40) . '.example.com';
+        $this->createUser($email, 'root password long', true);
+        $this->call('POST', '/login', ['email' => $email, 'password' => 'root password long']);
+
+        $page = $this->call('GET', '/account/2fa');
+        self::assertSame(200, $page->status);
+        self::assertStringNotContainsString('<svg ', $page->body);
+        self::assertMatchesRegularExpression('#<code>[A-Z2-7]{32}</code>#', $page->body, 'Secret bleibt zur manuellen Eingabe');
+    }
+
     public function testSetupThenLoginWithSecondFactor(): void
     {
         $this->createUser('root@example.com', 'root password long', true);
@@ -28,6 +40,8 @@ final class TwoFactorFlowTest extends KernelTestCase
         $page = $this->call('GET', '/account/2fa');
         preg_match('#<code>([A-Z2-7]{32})</code>#', $page->body, $m);
         self::assertNotEmpty($m, 'Secret wird angezeigt');
+        self::assertStringContainsString('<svg ', $page->body, 'QR-Code wird serverseitig inline gerendert');
+        self::assertStringNotContainsString('<img', $page->body, 'kein externer QR-Dienst');
         $secret = $m[1];
 
         $wrong = $this->call('POST', '/account/2fa', ['code' => '000000']);
