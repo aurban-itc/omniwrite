@@ -135,12 +135,15 @@ final class CoastalImporter
 
         // Einstellungen nur setzen, wo die neue Site noch nichts hat (Handarbeit in OmniWrite gewinnt).
         $bs = (array) ($bundle['settings'] ?? []);
+        $cursorImported = false;
         foreach (self::SETTINGS as $key) {
             if (isset($bs[$key]) && $settings->get($key) === '') {
                 $settings->set($key, (string) $bs[$key]);
+                $cursorImported = $cursorImported || $key === 'topic_cursor';
             }
         }
-        if (isset($bs['topic_cursor']) && $settings->get(TopicService::CURSOR_ID_KEY) === '' && isset($byOrder[(int) $bs['topic_cursor']])) {
+        // Zeiger-ID nur zusammen mit dem Zeiger übernehmen, sonst beschreiben beide verschiedene Rotationen.
+        if ($cursorImported && isset($byOrder[(int) $bs['topic_cursor']]) && $settings->get(TopicService::CURSOR_ID_KEY) === '') {
             $settings->set(TopicService::CURSOR_ID_KEY, (string) $byOrder[(int) $bs['topic_cursor']]);
         }
         return $r;

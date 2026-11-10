@@ -119,6 +119,35 @@ final class CoastalImporterTest extends DbTestCase
         $this->assertCount(2, (new PostRepository($this->pdo, new SiteContext($this->siteId)))->all(10));
     }
 
+    public function testKeepsExistingCursorAndDoesNotSetForeignCursorId(): void
+    {
+        $s = new SiteSettingsRepository($this->pdo, new SiteContext($this->siteId));
+        $s->set('topic_cursor', '20');
+        $this->importer->import($this->siteId, $this->bundle());
+        $this->assertSame('20', $s->get('topic_cursor'));
+        $this->assertSame('', $s->get('topic_cursor_id'));
+    }
+
+    public function testRedirectScriptWritesRulesAndIndexWithLegacyKeys(): void
+    {
+        $b = $this->bundle();
+        $b['posts'][0]['legacy_slug'] = 'old-key';
+        $dir = sys_get_temp_dir() . '/ow-redir-' . bin2hex(random_bytes(4));
+        mkdir($dir);
+        file_put_contents("$dir/e.json", json_encode($b));
+        $out = (string) shell_exec(sprintf('php %s %s https://insights.example.com %s',
+            escapeshellarg(dirname(__DIR__, 2) . '/bin/coastal-redirects.php'), escapeshellarg("$dir/e.json"), escapeshellarg("$dir/index.json")));
+        $this->assertStringContainsString('^insights/hello(\.html)?/?$ https://insights.example.com/hello?', $out);
+        $this->assertStringNotContainsString('waiting', $out);
+        $index = json_decode((string) file_get_contents("$dir/index.json"), true);
+        $this->assertCount(1, $index);
+        $this->assertSame('old-key', $index[0]['legacy']);
+        $this->assertSame('https://insights.example.com/hello', $index[0]['url']);
+        $this->assertSame('https://www.coastalcopy.com/assets/blog/a.webp', $index[0]['image']);
+        array_map('unlink', glob("$dir/*"));
+        rmdir($dir);
+    }
+
     public function testDoesNotTouchOtherSites(): void
     {
         [, $other] = (new Fixtures($this->pdo))->accountWithSite('other');

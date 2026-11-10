@@ -40,8 +40,8 @@ $topics = $rows('SELECT id, title, keywords, category, notes, status, sort_order
 $recipients = $rows('SELECT email, name, active FROM cb_recipients ORDER BY id');
 $settings = [];
 foreach ($rows('SELECT k, v FROM cb_settings') as $r) {
-    // Nur Inhalte und Zähler; Schlüssel mit Geheimnissen gehören nicht in die Datei.
-    if (!preg_match('/key|secret|token|pass/i', $r['k'])) {
+    // Allowlist statt Sperrliste: nur diese Inhalte und der Themenzeiger gehören in die Datei, alles andere (auch unbekannte Schlüssel) bleibt zurück.
+    if (in_array($r['k'], ['style_guide', 'company_facts', 'image_style', 'topic_cursor'], true)) {
         $settings[$r['k']] = $r['v'];
     }
 }
