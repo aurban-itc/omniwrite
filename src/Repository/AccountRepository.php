@@ -72,4 +72,50 @@ final class AccountRepository
         $value = $stmt->fetchColumn();
         return $value === false || $value === null ? null : (int) $value;
     }
+
+    /** @return array{id: int, name: string}|null */
+    public function find(int $id): ?array
+    {
+        $stmt = $this->pdo->prepare('SELECT id, name FROM accounts WHERE id = ?');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        return $row ? ['id' => (int) $row['id'], 'name' => (string) $row['name']] : null;
+    }
+
+    public function rename(int $id, string $name): void
+    {
+        $this->pdo->prepare('UPDATE accounts SET name = ? WHERE id = ?')->execute([$name, $id]);
+    }
+
+    /** @return list<array{user_id: int, email: string, name: string, status: string, role: string}> */
+    public function members(int $accountId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT u.id, u.email, u.name, u.status, au.role FROM account_users au
+             JOIN users u ON u.id = au.user_id WHERE au.account_id = ? ORDER BY au.role, u.id'
+        );
+        $stmt->execute([$accountId]);
+        return array_map(
+            static fn (array $r): array => ['user_id' => (int) $r['id'], 'email' => (string) $r['email'], 'name' => (string) $r['name'], 'status' => (string) $r['status'], 'role' => (string) $r['role']],
+            $stmt->fetchAll()
+        );
+    }
+
+    public function ownerCount(int $accountId): int
+    {
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM account_users WHERE account_id = ? AND role = 'owner'");
+        $stmt->execute([$accountId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function setRole(int $accountId, int $userId, Role $role): void
+    {
+        $this->pdo->prepare('UPDATE account_users SET role = ? WHERE account_id = ? AND user_id = ?')
+            ->execute([$role->value, $accountId, $userId]);
+    }
+
+    public function removeMember(int $accountId, int $userId): void
+    {
+        $this->pdo->prepare('DELETE FROM account_users WHERE account_id = ? AND user_id = ?')->execute([$accountId, $userId]);
+    }
 }

@@ -30,6 +30,8 @@ final class Request
         public readonly bool $https = false,
         /** Host des Aufrufs, kleingeschrieben und ohne Port; leer = unbekannt (dann gilt das Portal). */
         public readonly string $host = '',
+        /** Hochgeladene Dateien wie in $_FILES. @var array<string, mixed> */
+        public readonly array $files = [],
     ) {
     }
 
@@ -47,6 +49,7 @@ final class Request
             (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'),
             $https,
             strtolower((string) preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? ''))),
+            $_FILES,
         );
     }
 
