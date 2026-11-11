@@ -6,6 +6,6 @@
   <input id="account_name" name="account_name" required value="<?= $e($old['account_name'] ?? '') ?>">
   <?php if (!empty($errors['account_name'])): ?><p class="err"><?= $e($t($errors['account_name'])) ?></p><?php endif; ?>
   <h2><?= $e($t('admin.owner')) ?></h2>
-  <?php include __DIR__ . '/_admin_user_fields.php'; ?>
+  <?php $nameRequired = true; include __DIR__ . "/_admin_user_fields.php"; ?>
   <button><?= $e($t('admin.create_account')) ?></button>
 </form>
