@@ -252,14 +252,23 @@ final class CoastalImporterTest extends DbTestCase
         $ext = pathinfo((string) $file, PATHINFO_EXTENSION);
         $posts->update((int) $old['id'], [
             'cover_image' => $old['cover_image'] . '.' . $ext,
-            'body_html' => '<p>x</p><img src="' . $old['cover_image'] . '.' . $ext . '" alt="a"><img src="https://example.org/a.webp" alt="b">',
+            'body_html' => '<p>x</p><img src="' . $old['cover_image'] . '.' . $ext . '" alt="a"><img src="https://example.org/a.webp" alt="b"><img src="https://cdn.example.org/media/' . $this->siteId . '/0123456789abcdef.webp" alt="c">',
         ]);
         $this->importer->import($this->siteId, $b);
         $new = $posts->findBySlug('hello');
         $this->assertSame($old['cover_image'], $new['cover_image']);
         $this->assertStringContainsString('src="' . $old['cover_image'] . '"', $new['body_html']);
         $this->assertStringContainsString('src="https://example.org/a.webp"', $new['body_html'], 'fremde Adressen bleiben');
+        $this->assertStringContainsString('src="https://cdn.example.org/media/' . $this->siteId . '/0123456789abcdef.webp"', $new['body_html'], 'fremder Host bleibt unverändert');
         $this->assertSame($old['updated_at'], $new['updated_at']);
+
+        // NULL als Änderungszeit bleibt NULL
+        $this->pdo->exec('UPDATE posts SET updated_at = NULL WHERE id = ' . (int) $old['id']);
+        $posts->update((int) $old['id'], ['cover_image' => $old['cover_image'] . '.' . $ext]);
+        $this->importer->import($this->siteId, $b);
+        $again = $posts->findBySlug('hello');
+        $this->assertSame($old['cover_image'], $again['cover_image']);
+        $this->assertNull($again['updated_at']);
     }
 
     public function testDoesNotTouchOtherSites(): void
