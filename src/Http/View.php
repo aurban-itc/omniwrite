@@ -29,7 +29,12 @@ final class View
         ];
         $content = $this->capture($this->dir . '/' . $template . '.php', $vars);
         $page = $this->capture($this->dir . '/layout.php', $vars + ['content' => $content]);
-        return Response::html($page, $status);
+        $response = Response::html($page, $status);
+        if ($template === 'post_edit') {
+            // Nur der Beitragseditor lädt https-Bilder (Titelbild-Vorschau); Prüf- und Verwaltungsseiten bleiben ohne Fremdbilder.
+            $response = $response->withHeaders(['Content-Security-Policy' => "default-src 'self'; img-src 'self' https:; style-src 'self' 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'"]);
+        }
+        return $response;
     }
 
     /**
