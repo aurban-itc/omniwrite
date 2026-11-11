@@ -88,6 +88,7 @@ textarea{resize:vertical}
 
 /* Buttons */
 button,.btn{display:inline-block;margin-top:1.1rem;padding:.7rem 1.4rem;font:inherit;font-size:.82rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;color:var(--accent-fg);background:var(--grad);border:0;border-radius:999px;transition:filter .15s,transform .1s,box-shadow .15s;box-shadow:0 8px 24px -10px var(--accent)}
+[hidden],button[hidden],.btn[hidden]{display:none!important}
 button:hover{filter:brightness(1.12)}
 button:active{transform:translateY(1px)}
 button:focus-visible,a:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
