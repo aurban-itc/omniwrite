@@ -85,6 +85,14 @@ final class AdminManagementTest extends KernelTestCase
         self::assertCount(1, $this->accounts->members($id));
     }
 
+    public function testFailedMemberFormKeepsSelectedRole(): void
+    {
+        $id = $this->newAccount();
+        $r = $this->call('POST', "/admin/accounts/$id/members", ['email' => 'neu@x.test', 'name' => 'Neu', 'password' => 'kurz', 'role' => 'owner']);
+        self::assertSame(422, $r->status);
+        self::assertMatchesRegularExpression('/<option value="owner" selected>/', $r->body);
+    }
+
     public function testLastOwnerIsProtected(): void
     {
         $id = $this->newAccount();

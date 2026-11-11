@@ -119,21 +119,26 @@ final class AdminService
     public function setMemberRole(User $actor, int $accountId, int $userId, string $role, ?string $ip = null): void
     {
         $new = Role::tryFrom($role) ?? throw new ValidationException(['role' => 'err.role_invalid']);
-        $current = $this->accounts->roleOf($accountId, $userId) ?? throw new NotFoundException('Mitglied nicht gefunden');
-        if ($current === Role::Owner && $new !== Role::Owner && $this->accounts->ownerCount($accountId) <= 1) {
-            throw new ValidationException(['role' => 'err.last_owner']);
-        }
-        $this->accounts->setRole($accountId, $userId, $new);
+        // Prüfung und Änderung unter einer Sperre pro Account, damit zwei gleichzeitige Änderungen nicht beide den letzten Owner entfernen.
+        $this->users->withLock('omniwrite-owners-' . $accountId, function () use ($accountId, $userId, $new): void {
+            $current = $this->accounts->roleOf($accountId, $userId) ?? throw new NotFoundException('Mitglied nicht gefunden');
+            if ($current === Role::Owner && $new !== Role::Owner && $this->accounts->ownerCount($accountId) <= 1) {
+                throw new ValidationException(['role' => 'err.last_owner']);
+            }
+            $this->accounts->setRole($accountId, $userId, $new);
+        });
         $this->audit->log('admin.member_role', $actor->id, $accountId, ['user_id' => $userId, 'role' => $new->value], $ip);
     }
 
     public function removeMember(User $actor, int $accountId, int $userId, ?string $ip = null): void
     {
-        $current = $this->accounts->roleOf($accountId, $userId) ?? throw new NotFoundException('Mitglied nicht gefunden');
-        if ($current === Role::Owner && $this->accounts->ownerCount($accountId) <= 1) {
-            throw new ValidationException(['role' => 'err.last_owner']);
-        }
-        $this->accounts->removeMember($accountId, $userId);
+        $this->users->withLock('omniwrite-owners-' . $accountId, function () use ($accountId, $userId): void {
+            $current = $this->accounts->roleOf($accountId, $userId) ?? throw new NotFoundException('Mitglied nicht gefunden');
+            if ($current === Role::Owner && $this->accounts->ownerCount($accountId) <= 1) {
+                throw new ValidationException(['role' => 'err.last_owner']);
+            }
+            $this->accounts->removeMember($accountId, $userId);
+        });
         $this->audit->log('admin.member_remove', $actor->id, $accountId, ['user_id' => $userId], $ip);
     }
 

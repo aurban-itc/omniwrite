@@ -46,7 +46,7 @@
   <?php $errors_m = $form === 'member' ? $errors : []; $old_m = $form === 'member' ? $old : []; ?>
   <?php (function () use ($e, $t, $errors_m, $old_m): void { $errors = $errors_m; $old = $old_m; include __DIR__ . '/_admin_user_fields.php'; })(); ?>
   <label for="role"><?= $e($t('field.role')) ?></label>
-  <select id="role" name="role"><option value="editor"><?= $e($t('role.editor')) ?></option><option value="owner"><?= $e($t('role.owner')) ?></option></select>
+  <select id="role" name="role"><option value="editor"><?= $e($t('role.editor')) ?></option><option value="owner"<?= $form === 'member' && ($old['role'] ?? '') === 'owner' ? ' selected' : '' ?>><?= $e($t('role.owner')) ?></option></select>
   <?php if ($err('member', 'role') !== ''): ?><p class="err"><?= $e($t($err('member', 'role'))) ?></p><?php endif; ?>
   <button><?= $e($t('btn.add')) ?></button>
 </form>
