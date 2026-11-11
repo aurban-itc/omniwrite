@@ -21,8 +21,7 @@ final class Response
             'X-Frame-Options' => 'DENY',
             'Referrer-Policy' => 'same-origin',
             'Strict-Transport-Security' => 'max-age=31536000',
-            // img-src https: für die Titelbild-Vorschau im Editor (Bilder liegen auch auf fremden https-Hosts).
-            'Content-Security-Policy' => "default-src 'self'; img-src 'self' https:; style-src 'self' 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
+            'Content-Security-Policy' => "default-src 'self'; style-src 'self' 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
         ], $body);
     }
 
