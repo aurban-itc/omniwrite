@@ -127,14 +127,21 @@ if (!hash_equals(WEB_TOKEN, $given)) {
 header('Cache-Control: no-store');
 header('X-Robots-Tag: noindex');
 // Genau ein Aufruf darf exportieren: rename() ist atomar, wer die Datei nicht umbenennen kann (weil ein anderer Aufruf sie schon hat), bekommt 404.
-$claimed = __DIR__ . '/.' . basename(__FILE__) . '.claimed';
+// Der neue Name endet auf .php mit Zufallsteil: er ist nicht zu erraten, und selbst ein Abruf liefert nur die Token-Abfrage, nie den Quelltext.
+$claimed = __DIR__ . '/coastal-export-' . bin2hex(random_bytes(8)) . '.php';
 if (!@rename(__FILE__, $claimed)) {
     http_response_code(404);
     exit;
 }
-$restore = static function () use ($claimed): void {      // Export kam nicht beim Browser an oder schlug fehl: Datei wieder bereitstellen, damit ein neuer Versuch geht
-    @rename($claimed, __FILE__);
-};
+$done = false;                                               // true erst, wenn die Datei bewusst gelöscht wurde
+$reserve = str_repeat('x', 1 << 20);                           // Speicherreserve, damit die Wiederherstellung auch nach einem Speicherfehler läuft
+$original = __FILE__;
+register_shutdown_function(static function () use (&$done, &$reserve, $claimed, $original): void {
+    $reserve = null;
+    if (!$done && is_file($claimed)) {                        // Export kam nicht beim Browser an oder schlug fehl (auch durch Speicher- oder Zeitlimit): Datei wieder bereitstellen
+        @rename($claimed, $original);
+    }
+});
 $config = null;
 foreach ([__DIR__ . '/_private/config.php', dirname(__DIR__) . '/_private/config.php'] as $c) {
     if (is_file($c)) {
@@ -156,7 +163,6 @@ try {
     }
     $json = json_encode(coastal_export($config, $webroot), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 } catch (Throwable $e) {
-    $restore();
     http_response_code(500);
     header('Content-Type: text/plain; charset=utf-8');
     error_log('coastal-export.php: ' . $e->getMessage());     // Details nur ins Fehlerlog, nicht an den Browser
@@ -171,8 +177,9 @@ echo $json;
 if (function_exists('flush')) {
     @flush();
 }
-if (connection_aborted()) {
-    $restore();                                                   // Download unterbrochen: Datei bleibt für einen neuen Versuch
-} elseif (!@unlink($claimed)) {
-    error_log('coastal-export.php konnte die umbenannte Datei nicht löschen: bitte ' . $claimed . ' manuell entfernen');
+if (!connection_aborted()) {                                      // bei abgebrochenem Download stellt der Shutdown-Handler die Datei wieder her
+    $done = true;
+    if (!@unlink($claimed)) {
+        error_log('coastal-export.php konnte die umbenannte Datei nicht löschen: bitte ' . $claimed . ' manuell entfernen');
+    }
 }
