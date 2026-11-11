@@ -35,7 +35,8 @@ return [
         // Optional: 'anthropic_model' => 'claude-sonnet-5-5', 'openai_image_model' => 'gpt-image-1'
     ],
     'storage' => [
-        // Bilder (KI-generiert). Außerhalb von public/ ablegen; muss für PHP beschreibbar sein.
+        // Bilder (KI-generiert und importiert). Außerhalb von public/ UND außerhalb des Deploy-Ordners ablegen
+        // (z. B. /home/<user>/omniwrite-storage), sonst kann ein Deployment die Bilder löschen. Muss für PHP beschreibbar sein.
         // 'path' => __DIR__ . '/../storage',
     ],
     // 'review' => ['link_hours' => 72],   // Gültigkeit der Links in der Review-Mail

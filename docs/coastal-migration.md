@@ -13,3 +13,10 @@ Einfachster Weg: Coastal-Blog wird eine OmniWrite-Site mit eigener Subdomain (z.
 5. **Weiterleitungen**: `php bin/coastal-redirects.php export.json https://insights.coastalcopy.com insights-index.json` erzeugt Regeln für `/insights/<slug>.html`, `/insights/` und den Feed; in die `.htaccess` des Coastal-Hostings einfügen (z. B. neben den Regeln aus `generate-redirects.php`). Die alten Artikel-Links der Seite `Coastal-Insights.html#<alter-schlüssel>` sind Hash-Links, die kein Server sieht; die Seite leitet sie über `insights/index.json` um. Darum `insights-index.json` bei Coastal als `insights/index.json` einspielen (ersetzt die Datei; die Karten zeigen dann auf die neuen Adressen).
 6. **Coastal abschalten**: den wöchentlichen Cron und den Admin des alten Blogs deaktivieren, sobald der OmniWrite-Cron läuft (sonst entstehen doppelte Beiträge und Mails). Auf der Insights-Seite von Coastal Link oder `embed.js` (siehe Blog-Einstellungen) einsetzen.
 7. `export.json` löschen (enthält Empfänger-Adressen).
+
+## Bilder fehlen nach einem Deployment (404 unter /media/…)
+
+Liegt `storage.path` im Deploy-Ordner (Standard: `storage/` im Projekt), kann ein Deployment die Bilder entfernen. Dann zeigen übernommene Beiträge ins Leere.
+
+1. In `config/config.php` `storage.path` auf einen Ordner außerhalb des Deploy-Ordners setzen (beschreibbar für PHP), z. B. `/home/<user>/omniwrite-storage`.
+2. Den Export erneut erzeugen und unter `/admin/import` hochladen. Bestehende Beiträge bleiben, nur fehlende Bilder (Titelbild und Bilder im Text an gleicher Stelle) werden neu angelegt. Wurde der Beitragstext verändert, gibt es eine Warnung statt eines Austauschs.

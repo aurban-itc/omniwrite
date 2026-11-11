@@ -94,6 +94,7 @@ final class CoastalImporter
             if ($existing !== null) {
                 $r['posts_skipped']++;
                 $this->repairImages($posts, $existing, $siteId, $origin, (array) ($bundle['images'] ?? []), $imageMap, $r);
+                $this->restoreMissingMedia($posts, $existing, $p, $siteId, $origin, (array) ($bundle['images'] ?? []), $imageMap, $r);
                 continue;
             }
             $cover = $this->resolveImage($siteId, (string) ($p['cover_image'] ?? ''), $origin, (array) ($bundle['images'] ?? []), $imageMap, $r);
@@ -189,6 +190,57 @@ final class CoastalImporter
         $r['images'] += $scratch['images'];
         foreach ($warnings as $w) {
             $r['warnings'][] = $w;
+        }
+    }
+
+    /** True, wenn der Verweis auf ein eigenes Bild (/media/<site>/<datei>) zeigt, dessen Datei im Speicher fehlt. */
+    private function isMissingMedia(string $ref, int $siteId): bool
+    {
+        return preg_match('#^/media/' . $siteId . '/([^/?\#]+)$#', $ref, $m) === 1 && $this->images->pathFor($siteId, $m[1]) === null;
+    }
+
+    /**
+     * Wurde der Bilderordner geleert (z. B. durch ein Deployment), zeigen übernommene Beiträge ins Leere.
+     * Beim erneuten Import werden genau diese Verweise aus dem Export neu angelegt; Textänderungen im Beitrag bleiben unangetastet.
+     *
+     * @param array<string, mixed> $post @param array<string, mixed> $src @param array<string, string> $bundleImages @param array<string, string> $map @param array<string, mixed> $r
+     */
+    private function restoreMissingMedia(PostRepository $posts, array $post, array $src, int $siteId, string $origin, array $bundleImages, array &$map, array &$r): void
+    {
+        $changed = [];
+        $cover = (string) $post['cover_image'];
+        if ($this->isMissingMedia($cover, $siteId)) {
+            $new = $this->resolveImage($siteId, (string) ($src['cover_image'] ?? ''), $origin, $bundleImages, $map, $r);
+            if ($new !== '' && !$this->isMissingMedia($new, $siteId)) {
+                $changed['cover_image'] = $new;
+            }
+        }
+        $body = (string) $post['body_html'];
+        $pattern = '#(<img\b[^>]*?\bsrc=)(["\'])([^"\']+)\2#i';
+        preg_match_all($pattern, (string) ($src['body_html'] ?? ''), $orig);
+        preg_match_all($pattern, $body, $cur);
+        $missing = array_filter($cur[3], fn (string $u): bool => $this->isMissingMedia($u, $siteId));
+        if ($missing !== []) {
+            if (count($orig[3]) !== count($cur[3])) {
+                $r['warnings'][] = 'Bilder im Beitrag "' . (string) $post['slug'] . '" fehlen, wurden aber nicht ersetzt (Beitrag wurde verändert).';
+            } else {
+                $i = -1;
+                $newBody = (string) preg_replace_callback($pattern, function (array $m) use (&$i, $orig, $siteId, $origin, $bundleImages, &$map, &$r): string {
+                    $i++;
+                    if (!$this->isMissingMedia($m[3], $siteId)) {
+                        return $m[0];
+                    }
+                    $new = $this->resolveImage($siteId, $orig[3][$i], $origin, $bundleImages, $map, $r);
+                    return $new !== '' ? $m[1] . $m[2] . $new . $m[2] : $m[0];
+                }, $body);
+                if ($newBody !== $body) {
+                    $changed['body_html'] = $newBody;
+                }
+            }
+        }
+        if ($changed !== []) {
+            $posts->update((int) $post['id'], $changed);
+            $r['images_repaired']++;
         }
     }
 

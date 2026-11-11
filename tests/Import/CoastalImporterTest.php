@@ -179,6 +179,27 @@ final class CoastalImporterTest extends DbTestCase
         $this->assertSame(0, $r['images_repaired']);
     }
 
+    public function testReimportRestoresMediaFilesLostFromStorage(): void
+    {
+        $b = $this->bundle();
+        $this->importer->import($this->siteId, $b);
+        $posts = new PostRepository($this->pdo, new SiteContext($this->siteId));
+        $old = $posts->findBySlug('hello');
+        $this->assertNotSame('', $old['cover_image']);
+        foreach (glob($this->dir . '/images/' . $this->siteId . '/*') ?: [] as $f) {
+            unlink($f);   // wie nach einem Deployment, das storage/ ersetzt
+        }
+        $r = $this->importer->import($this->siteId, $b);
+        $this->assertSame(0, $r['posts']);
+        $this->assertSame(1, $r['images_repaired']);
+        $new = $posts->findBySlug('hello');
+        $this->assertNotSame($old['cover_image'], $new['cover_image']);
+        $this->assertNotNull((new ImageStore($this->dir))->pathFor($this->siteId, basename($new['cover_image'])));
+        $this->assertStringContainsString('src="' . $new['cover_image'] . '"', $new['body_html']);
+        $r = $this->importer->import($this->siteId, $b);
+        $this->assertSame(0, $r['images_repaired'], 'zweiter Lauf ändert nichts mehr');
+    }
+
     public function testDoesNotTouchOtherSites(): void
     {
         [, $other] = (new Fixtures($this->pdo))->accountWithSite('other');
