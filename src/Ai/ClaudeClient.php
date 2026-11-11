@@ -47,12 +47,13 @@ final class ClaudeClient implements TextModel
         $json = json_decode($res['body'], true);
         if ($res['status'] !== 200 || !is_array($json)) {
             // Rohtext des Anbieters nur ins Log (ohne Schlüssel), nie an den Nutzer.
-            error_log('anthropic: HTTP ' . $res['status'] . ' ' . substr((string) preg_replace('/\s+/', ' ', $res['body']), 0, 300));
+            $detail = 'Anthropic HTTP ' . $res['status'] . ': ' . substr((string) preg_replace('/\s+/', ' ', $res['body']), 0, 300);
+            error_log($detail);
             throw new AiException(match (true) {
                 $res['status'] === 401 || $res['status'] === 403 => 'err.ai_key_rejected',
                 $res['status'] === 429 || $res['status'] === 529 => 'err.ai_busy',
                 default => 'err.ai_failed',
-            });
+            }, $detail);
         }
         foreach ($json['content'] ?? [] as $block) {
             if (($block['type'] ?? '') === 'tool_use' && is_array($block['input'] ?? null)) {
