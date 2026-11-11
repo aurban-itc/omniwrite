@@ -187,6 +187,9 @@ final class CoastalImporter
             }
         }
         $r['images'] += $scratch['images'];
+        foreach ($warnings as $w) {
+            $r['warnings'][] = $w;
+        }
     }
 
     /** @param array<string, string> $bundleImages @param array<string, string> $map @param array<string, mixed> $r */

@@ -161,6 +161,12 @@ final class CoastalImporterTest extends DbTestCase
         $this->assertSame('https://www.coastalcopy.com/assets/slots/desk.avif', $posts->findBySlug('hello')['cover_image']);
 
         $b['images'] = ['assets/slots/desk.avif' => $avif];
+        $bad = $b;
+        $bad['images'] = ['assets/slots/desk.avif' => base64_encode('not an image')];
+        $r = $this->importer->import($this->siteId, $bad);
+        $this->assertSame(0, $r['images_repaired']);
+        $this->assertNotEmpty(array_filter($r['warnings'], fn ($w) => str_contains($w, 'assets/slots/desk.avif')), 'fehlgeschlagener Nachtrag wird gemeldet');
+
         $r = $this->importer->import($this->siteId, $b);
         $this->assertSame(0, $r['posts']);
         $this->assertSame(1, $r['images_repaired']);

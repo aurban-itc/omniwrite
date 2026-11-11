@@ -140,6 +140,7 @@
 
     function setView(view) {
       root.setAttribute('data-ow-view', view);
+      if (list) list.hidden = view !== 'list';
       if (article) article.hidden = view !== 'article';
       if (readingClass) document.body.classList.toggle(readingClass, view === 'article');
       if (view === 'list') document.title = baseTitle;
