@@ -10,7 +10,7 @@ final class Database
 {
     public static function connect(Config $config): PDO
     {
-        return new PDO(
+        $pdo = new PDO(
             (string) $config->get('db.dsn'),
             (string) $config->get('db.user'),
             (string) $config->get('db.password'),
@@ -20,5 +20,12 @@ final class Database
                 PDO::ATTR_EMULATE_PREPARES => false,
             ],
         );
+        // KI-Aufrufe dauern bis zu mehrere Minuten; sonst trennt der Server die untätige Verbindung ("server has gone away").
+        try {
+            $pdo->exec('SET SESSION wait_timeout = 900');
+        } catch (\Throwable) {
+            // Anbieter erlaubt es nicht oder kein MySQL: ohne Anpassung weiterarbeiten.
+        }
+        return $pdo;
     }
 }
