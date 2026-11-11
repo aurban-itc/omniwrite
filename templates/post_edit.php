@@ -92,4 +92,4 @@ $err = static fn (string $k): string => isset($errors[$k]) ? '<p class="err">' .
   <?php endforeach; ?>
 </div>
 <?php endif; ?>
-<script src="/assets/editor.js" defer></script>
+<script src="/assets/editor.js?v=<?= (int) @filemtime(__DIR__ . '/../public/assets/editor.js') ?>" defer></script>

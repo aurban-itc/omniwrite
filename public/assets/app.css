@@ -72,7 +72,7 @@ nav.topbar a.cta:hover{filter:brightness(1.1)}
 .card,main>form:not([style]),main>.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:1.2rem 1.4rem;margin:1rem 0;box-shadow:var(--shadow)}
 .card{transition:border-color .15s,transform .15s}
 a.card:hover,.card:hover{border-color:var(--line-strong)}
-main>form:not([style]){max-width:56rem;padding:1.6rem}
+main>form:not([style]){max-width:80rem;padding:1.6rem}
 main>form#post-form{max-width:none}
 #post-form details>summary{cursor:pointer;font-weight:600;margin-bottom:.4rem}
 @media (min-width:1000px){#post-form details[open]{display:grid;grid-template-columns:1fr 1fr;column-gap:2rem}#post-form details>summary,#post-form details>label[for=excerpt],#post-form details>#excerpt,#post-form details>label[for=meta_description],#post-form details>#meta_description,#post-form details>label[for=image_prompt],#post-form details>#image_prompt,#post-form details>.err,#post-form details>#img-gen{grid-column:1/-1}}
