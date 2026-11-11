@@ -200,6 +200,45 @@ final class CoastalImporterTest extends DbTestCase
         $this->assertSame(0, $r['images_repaired'], 'zweiter Lauf ändert nichts mehr');
     }
 
+    public function testEditedPostIsNotRestoredFromExportAfterStorageLoss(): void
+    {
+        $b = $this->bundle();
+        $this->importer->import($this->siteId, $b);
+        $posts = new PostRepository($this->pdo, new SiteContext($this->siteId));
+        $old = $posts->findBySlug('hello');
+        $posts->update((int) $old['id'], ['cover_image' => '/media/' . $this->siteId . '/0123456789abcdef.webp', 'updated_at' => '2026-10-05 09:00:00']);   // Redaktion hat bearbeitet
+        foreach (glob($this->dir . '/images/' . $this->siteId . '/*') ?: [] as $f) {
+            unlink($f);
+        }
+        $r = $this->importer->import($this->siteId, $b);
+        $this->assertSame(0, $r['images_repaired']);
+        $this->assertSame('/media/' . $this->siteId . '/0123456789abcdef.webp', $posts->findBySlug('hello')['cover_image'], 'bearbeitetes Titelbild bleibt');
+        $this->assertNotEmpty(array_filter($r['warnings'], fn ($w) => str_contains($w, 'hello')));
+    }
+
+    public function testRestoreKeepsEarlierFallbackRepairInSamePost(): void
+    {
+        $b = $this->bundle();
+        $b['images'] = ['assets/blog/a.webp' => $this->png()];
+        $b['posts'][0]['body_html'] = '<p>x</p><img src="/assets/blog/a.webp" alt="a"><img src="/assets/slots/late.png" alt="b">';
+        $b['posts'][0]['cover_image'] = '';
+        $this->importer->import($this->siteId, $b);   // late.png fehlt im Export: bleibt als Verweis auf die alte Adresse
+        foreach (glob($this->dir . '/images/' . $this->siteId . '/*') ?: [] as $f) {
+            unlink($f);
+        }
+        $b['images']['assets/slots/late.png'] = $this->png();
+        $r = $this->importer->import($this->siteId, $b);
+        $posts = new PostRepository($this->pdo, new SiteContext($this->siteId));
+        $body = $posts->findBySlug('hello')['body_html'];
+        $this->assertStringNotContainsString('coastalcopy.com/assets', $body);
+        preg_match_all('#src="(/media/\d+/[a-f0-9]{16}\.\w+)"#', $body, $m);
+        $this->assertCount(2, $m[1]);
+        foreach ($m[1] as $u) {
+            $this->assertNotNull((new ImageStore($this->dir))->pathFor($this->siteId, basename($u)), $u);
+        }
+        $this->assertGreaterThan(0, $r['images_repaired']);
+    }
+
     public function testDoesNotTouchOtherSites(): void
     {
         [, $other] = (new Fixtures($this->pdo))->accountWithSite('other');

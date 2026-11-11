@@ -19,4 +19,4 @@ Einfachster Weg: Coastal-Blog wird eine OmniWrite-Site mit eigener Subdomain (z.
 Liegt `storage.path` im Deploy-Ordner (Standard: `storage/` im Projekt), kann ein Deployment die Bilder entfernen. Dann zeigen übernommene Beiträge ins Leere.
 
 1. In `config/config.php` `storage.path` auf einen Ordner außerhalb des Deploy-Ordners setzen (beschreibbar für PHP), z. B. `/home/<user>/omniwrite-storage`.
-2. Den Export erneut erzeugen und unter `/admin/import` hochladen. Bestehende Beiträge bleiben, nur fehlende Bilder (Titelbild und Bilder im Text an gleicher Stelle) werden neu angelegt. Wurde der Beitragstext verändert, gibt es eine Warnung statt eines Austauschs.
+2. Den Export erneut erzeugen und unter `/admin/import` hochladen. Bestehende Beiträge bleiben, nur fehlende Bilder (Titelbild und Bilder im Text an gleicher Stelle) werden neu angelegt. Das geschieht nur bei Beiträgen, die seit dem Import nicht bearbeitet wurden (gleiche Änderungszeit wie im Export, auch Veröffentlichen oder Zurückziehen zählt als Änderung). Bei bearbeiteten Beiträgen gibt es eine Warnung; zum Wiederherstellen den Beitrag löschen und den Export erneut importieren.
