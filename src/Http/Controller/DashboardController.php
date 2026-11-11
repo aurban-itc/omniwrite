@@ -38,7 +38,7 @@ final class DashboardController
             ], $r->ip);
         } catch (ValidationException $e) {
             return $this->renderDashboard($r, $e->errors, [
-                'name' => $r->input('name'), 'slug' => $r->input('slug'),
+                'name' => $r->input('name'), 'slug' => $r->input('slug'), 'timezone' => $r->input('timezone'),
             ], 422);
         } catch (AccessDeniedException) {
             return Response::text('Forbidden', 403);

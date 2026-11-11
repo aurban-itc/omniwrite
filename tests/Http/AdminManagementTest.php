@@ -51,6 +51,26 @@ final class AdminManagementTest extends KernelTestCase
         self::assertSame(1, (int) $this->pdo->query("SELECT COUNT(*) FROM audit_log WHERE action = 'admin.account_create'")->fetchColumn());
     }
 
+    public function testAccountWithoutInitialUserAndSiteWithTimezoneSelect(): void
+    {
+        $r = $this->call('POST', '/admin/accounts', ['account_name' => 'Kunde ohne Login', 'email' => '', 'name' => '', 'password' => '']);
+        self::assertSame(303, $r->status);
+        $id = (int) basename(explode('?', $r->headers['Location'])[0]);
+        self::assertSame([], $this->accounts->members($id));
+        $page = $this->call('GET', "/admin/accounts/$id");
+        self::assertStringContainsString('<select id="timezone" name="timezone">', $page->body);
+        self::assertStringContainsString('<option value="Europe/Berlin" selected>', $page->body);
+        $this->call('POST', "/admin/accounts/$id/sites", ['name' => 'Blog', 'slug' => 'ohne-login', 'locale' => 'de', 'timezone' => 'America/New_York']);
+        self::assertSame('America/New_York', $this->pdo->query("SELECT timezone FROM sites WHERE slug = 'ohne-login'")->fetchColumn());
+    }
+
+    public function testPartialOwnerDataIsStillValidated(): void
+    {
+        $r = $this->call('POST', '/admin/accounts', ['account_name' => 'Halb', 'email' => 'x@y.test', 'name' => '', 'password' => '']);
+        self::assertSame(422, $r->status);
+        self::assertSame(0, (int) $this->pdo->query("SELECT COUNT(*) FROM accounts WHERE name = 'Halb'")->fetchColumn());
+    }
+
     public function testCreateAccountValidates(): void
     {
         $this->newAccount();

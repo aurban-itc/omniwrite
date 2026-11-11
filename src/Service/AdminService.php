@@ -35,7 +35,9 @@ final class AdminService
     public function createAccount(User $actor, array $input, ?string $ip = null): int
     {
         $accountName = trim((string) ($input['account_name'] ?? ''));
-        $errors = $this->validateNewUser($input);
+        // Der erste Nutzer ist optional (Admin betreut den Account selbst): ganz leer = kein Nutzer, sonst vollständig prüfen.
+        $withOwner = trim((string) ($input['email'] ?? '')) !== '' || trim((string) ($input['name'] ?? '')) !== '' || (string) ($input['password'] ?? '') !== '';
+        $errors = $withOwner ? $this->validateNewUser($input) : [];
         if ($accountName === '' || mb_strlen($accountName) > 190) {
             $errors['account_name'] = 'err.account_name_required';
         }
@@ -44,9 +46,11 @@ final class AdminService
         }
         $this->pdo->beginTransaction();
         try {
-            $userId = $this->createUser($input);
+            $userId = $withOwner ? $this->createUser($input) : null;
             $accountId = $this->accounts->create($accountName);
-            $this->accounts->addMember($accountId, $userId, Role::Owner);
+            if ($userId !== null) {
+                $this->accounts->addMember($accountId, $userId, Role::Owner);
+            }
             $this->pdo->commit();
         } catch (\Throwable $e) {
             $this->pdo->rollBack();
