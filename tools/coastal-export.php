@@ -32,7 +32,16 @@ function coastal_export(string $configFile, string $webroot): array
     if (empty($db['dsn'])) {
         throw new RuntimeException('In der Konfiguration fehlt der Datenbank-Block.');
     }
-    $pdo = new PDO($db['dsn'], $db['user'] ?? null, $db['pass'] ?? null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+    $opts = [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC];
+    try {
+        $pdo = new PDO($db['dsn'], $db['user'] ?? null, $db['pass'] ?? null, $opts);
+    } catch (PDOException $e) {
+        // Wie im Coastal-Blog: manche Hoster legen DB-Nutzer nur für 'localhost' (Socket) an, nicht für 127.0.0.1.
+        if (!str_contains($db['dsn'], 'host=127.0.0.1')) {
+            throw $e;
+        }
+        $pdo = new PDO(str_replace('host=127.0.0.1', 'host=localhost', $db['dsn']), $db['user'] ?? null, $db['pass'] ?? null, $opts);
+    }
     $origin = rtrim((string) ($cfg['site_url'] ?? ''), '/');
     if ($origin === '' || preg_match('#^https?://[^/]*\.hostingersite\.com(/|$)#i', $origin)) {
         $origin = 'https://www.coastalcopy.com';
