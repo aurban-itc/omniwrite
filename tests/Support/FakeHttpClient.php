@@ -41,6 +41,18 @@ final class FakeHttpClient implements HttpClient
         return array_shift($this->queue) ?? ['status' => 0, 'body' => ''];
     }
 
+    /** @var list<array{method: string, url: string, headers: array<string, string>, body: ?string, pin: ?string}> */
+    public array $calls = [];
+
+    public function request(string $method, string $url, array $headers, ?string $body, int $timeoutSeconds, ?string $pinIp = null): array
+    {
+        $this->calls[] = ['method' => $method, 'url' => $url, 'headers' => $headers, 'body' => $body, 'pin' => $pinIp];
+        if ($this->onRequest !== null) {
+            ($this->onRequest)();
+        }
+        return array_shift($this->queue) ?? ['status' => 0, 'body' => ''];
+    }
+
     /** @return array<string, mixed> JSON-Body der letzten Anfrage */
     public function lastPayload(): array
     {

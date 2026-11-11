@@ -118,6 +118,16 @@ final class PostRepository extends SiteScopedRepository
         return $stmt->fetchAll();
     }
 
+    /** @return list<array<string, mixed>> alle veröffentlichten Beiträge mit Volltext (für Push-Abgleich) */
+    public function listPublishedFull(int $limit = 2000): array
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM posts WHERE ' . $this->scopedWhere("status = 'published'") . ' ORDER BY id LIMIT :limit');
+        $stmt->bindValue('site_id', $this->site->siteId, PDO::PARAM_INT);
+        $stmt->bindValue('limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
     public function countPublished(): int
     {
         $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM posts WHERE ' . $this->scopedWhere("status = 'published'"));
