@@ -9,7 +9,8 @@ $btn = static function (string $base, string $csrf, callable $e, callable $t, in
 <?php if (!empty($suggested)): ?><p class="ok"><?= $e($t('topic.suggested_added', ['n' => (int) $suggested])) ?></p><?php endif; ?>
 <?php if ($rs->canWrite()): ?>
   <p><a href="<?= $e($base) ?>/generate"><?= $e($t('ai.write_now')) ?></a>
-  <form method="post" action="<?= $e($base) ?>/topics/suggest" style="display:inline"><input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button><?= $e($t('ai.suggest_topics')) ?></button></form></p>
+  <form method="post" action="<?= $e($base) ?>/topics/suggest" style="display:inline"><input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button><?= $e($t('ai.suggest_topics')) ?></button></form>
+  <a href="<?= $e($base) ?>/settings/analyze"><?= $e($t('analyze.button')) ?></a></p>
 <?php endif; ?>
 <p><small><?= $e($t('topic.rotation_hint')) ?></small></p>
 <?php if ($overview['rotation'] === []): ?><p><?= $e($t('topic.none')) ?></p><?php endif; ?>

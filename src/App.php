@@ -25,6 +25,7 @@ use OmniWrite\Http\Controller\AuthController;
 use OmniWrite\Http\Controller\DashboardController;
 use OmniWrite\Http\Controller\ImpersonationController;
 use OmniWrite\Http\Controller\PostController;
+use OmniWrite\Http\Controller\SiteProfileController;
 use OmniWrite\Http\Controller\SiteSettingsController;
 use OmniWrite\Http\Controller\TopicController;
 use OmniWrite\Http\Controller\TwoFactorController;
@@ -44,6 +45,8 @@ use OmniWrite\Http\Controller\ScheduleController;
 use OmniWrite\Mail\Mailer;
 use OmniWrite\Mail\ResendMailer;
 use OmniWrite\Net\DnsResolver;
+use OmniWrite\Net\PageFetcher;
+use OmniWrite\Net\SafePageFetcher;
 use OmniWrite\Net\SystemDnsResolver;
 use OmniWrite\Service\AiService;
 use OmniWrite\Service\BlogSettingsService;
@@ -57,6 +60,7 @@ use OmniWrite\Service\PostService;
 use OmniWrite\Import\CoastalImporter;
 use OmniWrite\Service\AdminService;
 use OmniWrite\Service\SiteAccess;
+use OmniWrite\Service\SiteProfileService;
 use OmniWrite\Service\SiteService;
 use OmniWrite\Service\SiteSettingsService;
 use OmniWrite\Service\TopicService;
@@ -82,7 +86,7 @@ final class App
     }
 
     /** @param ?HttpClient $http Transport für KI-Anbieter und Mail (Tests liefern ein Fake); $mailer überschreibt den Mailversand */
-    public static function kernel(PDO $pdo, Config $config, ?string $root = null, ?HttpClient $http = null, ?Mailer $mailer = null, ?DnsResolver $dns = null): Kernel
+    public static function kernel(PDO $pdo, Config $config, ?string $root = null, ?HttpClient $http = null, ?Mailer $mailer = null, ?DnsResolver $dns = null, ?PageFetcher $pages = null): Kernel
     {
         $root ??= dirname(__DIR__);
         $users = new UserRepository($pdo);
@@ -123,6 +127,9 @@ final class App
         $store = new ImageStore((string) $config->get('storage.path', $root . '/storage'));
         $usage = new UsageService($pdo, $accounts);
         $ai = self::buildAi($pdo, $config, $audit, $http, $store, $postService, $topicService, $settingsService, $usage);
+        $profileC = new SiteProfileController($siteAccess, $view, $translator, new SiteProfileService(
+            $pdo, $audit, self::buildContentAi($config, $http), $usage, $settingsService, $topicService, $pages ?? new SafePageFetcher(),
+        ));
         $postC = new PostController($siteAccess, $view, $postService, $ai);
         $aiC = new AiController($siteAccess, $view, $translator, $ai, $topicService, $usage);
         $mediaC = new MediaController($store);
@@ -214,6 +221,9 @@ final class App
         $router->add('GET', '/sites/{slug}/topics/{id}', $topicC->editForm(...), 'user');
         $router->add('POST', '/sites/{slug}/topics/{id}', $topicC->update(...), 'user');
         $router->add('POST', '/sites/{slug}/topics/{id}/{action}', $topicC->action(...), 'user');
+        $router->add('GET', '/sites/{slug}/settings/analyze', $profileC->form(...), 'user');
+        $router->add('POST', '/sites/{slug}/settings/analyze', $profileC->analyze(...), 'user');
+        $router->add('POST', '/sites/{slug}/settings/analyze/apply', $profileC->apply(...), 'user');
         $router->add('GET', '/sites/{slug}/settings', $settingsC->form(...), 'user');
         $router->add('POST', '/sites/{slug}/settings', $settingsC->save(...), 'user');
         $router->add('GET', '/admin', $admin->index(...), 'superadmin');
@@ -241,11 +251,7 @@ final class App
     {
         return new AiService(
             $pdo, $audit,
-            new ContentAi(new ClaudeClient(
-                $http, (string) $config->get('ai.anthropic_api_key', ''),
-                (string) $config->get('ai.anthropic_model', ClaudeClient::DEFAULT_MODEL),
-                (string) $config->get('ai.anthropic_endpoint', ClaudeClient::DEFAULT_ENDPOINT),
-            )),
+            self::buildContentAi($config, $http),
             new OpenAiImageClient(
                 $http, (string) $config->get('ai.openai_api_key', ''),
                 (string) $config->get('ai.openai_image_model', 'gpt-image-1'),
@@ -253,6 +259,15 @@ final class App
             ),
             $store, $postService, $topicService, $settingsService, $usage,
         );
+    }
+
+    private static function buildContentAi(Config $config, HttpClient $http): ContentAi
+    {
+        return new ContentAi(new ClaudeClient(
+            $http, (string) $config->get('ai.anthropic_api_key', ''),
+            (string) $config->get('ai.anthropic_model', ClaudeClient::DEFAULT_MODEL),
+            (string) $config->get('ai.anthropic_endpoint', ClaudeClient::DEFAULT_ENDPOINT),
+        ));
     }
 
     private static function buildMailer(Config $config, HttpClient $http): Mailer
