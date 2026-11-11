@@ -205,13 +205,14 @@ final class CoastalImporter
      */
     private function normalizeMediaUrls(PostRepository $posts, array $post, int $siteId): array
     {
-        $re = '#(/media/' . $siteId . '/[a-f0-9]{16})\.(?:webp|png|avif)(?![\w.])#';
-        $cover = (string) preg_replace($re, '$1', (string) $post['cover_image']);
-        $body = (string) preg_replace($re, '$1', (string) $post['body_html']);
+        $coverRe = '#^(/media/' . $siteId . '/[a-f0-9]{16})\.(?:webp|png|avif)$#';
+        $bodyRe = '#(\bsrc=["\'])(/media/' . $siteId . '/[a-f0-9]{16})\.(?:webp|png|avif)(?=["\'])#i';   // nur eigene, wurzelrelative Adressen
+        $cover = (string) preg_replace($coverRe, '$1', (string) $post['cover_image']);
+        $body = (string) preg_replace($bodyRe, '$1$2', (string) $post['body_html']);
         if ($cover === (string) $post['cover_image'] && $body === (string) $post['body_html']) {
             return $post;
         }
-        $posts->update((int) $post['id'], ['cover_image' => $cover, 'body_html' => $body, 'updated_at' => (string) $post['updated_at']]);
+        $posts->update((int) $post['id'], ['cover_image' => $cover, 'body_html' => $body, 'updated_at' => $post['updated_at']]);   // Änderungszeit (auch NULL) bleibt
         return $posts->findBySlug((string) $post['slug']) ?? $post;
     }
 
