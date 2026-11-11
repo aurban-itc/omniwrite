@@ -95,7 +95,11 @@ final class AiController extends SiteController
             } catch (UsageLimitException $e) {
                 return Response::json(['error' => $this->translator->t($r->locale, $e->getMessage())], 429);
             } catch (AiException $e) {
-                return Response::json(['error' => $this->translator->t($r->locale, $e->getMessage())], 502);
+                $msg = $this->translator->t($r->locale, $e->getMessage());
+                if ($e->detail !== '' && $r->user?->isSuperadmin === true) {
+                    $msg .= ' [' . $e->detail . ']';
+                }
+                return Response::json(['error' => $msg], 502);
             }
         });
     }

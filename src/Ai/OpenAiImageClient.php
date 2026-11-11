@@ -39,13 +39,14 @@ final class OpenAiImageClient implements ImageModel
         $b64 = is_array($json) ? (string) ($json['data'][0]['b64_json'] ?? '') : '';
         if ($res['status'] !== 200 || $b64 === '') {
             $msg = is_array($json) ? strtolower((string) ($json['error']['message'] ?? '') . ' ' . (string) ($json['error']['code'] ?? '')) : '';
-            error_log('openai image: HTTP ' . $res['status'] . ' ' . substr((string) preg_replace('/\s+/', ' ', $msg !== '' ? $msg : $res['body']), 0, 300));
+            $detail = 'OpenAI HTTP ' . $res['status'] . ': ' . substr((string) preg_replace('/\s+/', ' ', $msg !== '' ? $msg : $res['body']), 0, 300);
+            error_log('openai image: ' . $detail);
             throw new AiException(match (true) {
-                $res['status'] === 401 => 'err.ai_key_rejected',
+                $res['status'] === 401 || $res['status'] === 403 => 'err.ai_key_rejected',
                 $res['status'] === 429 => 'err.ai_busy',
                 str_contains($msg, 'moderation') || str_contains($msg, 'safety') => 'err.ai_image_declined',
                 default => 'err.ai_failed',
-            });
+            }, $detail);
         }
         $raw = base64_decode($b64, true);
         if ($raw === false || $raw === '') {
