@@ -31,11 +31,12 @@ final class CoastalImporterTest extends DbTestCase
 
     protected function tearDown(): void
     {
-        foreach (glob($this->dir . '/*/*') ?: [] as $f) {
-            @unlink($f);
+        if (!is_dir($this->dir)) {
+            return;
         }
-        foreach (glob($this->dir . '/*') ?: [] as $d) {
-            @rmdir($d);
+        $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->dir, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
+        foreach ($it as $f) {
+            $f->isDir() ? @rmdir($f->getPathname()) : @unlink($f->getPathname());
         }
         @rmdir($this->dir);
     }
@@ -146,6 +147,36 @@ final class CoastalImporterTest extends DbTestCase
         $this->assertSame('https://www.coastalcopy.com/assets/blog/a.webp', $index[0]['image']);
         array_map('unlink', glob("$dir/*"));
         rmdir($dir);
+    }
+
+    public function testAvifIsStoredAndLaterImportRepairsFallbackReferences(): void
+    {
+        $avif = base64_encode((string) file_get_contents(dirname(__DIR__) . '/fixtures/sample.avif'));
+        $b = $this->bundle();
+        $b['images'] = []; // erster Export ohne Bilder: Verweise bleiben auf der alten Adresse
+        $b['posts'][0]['cover_image'] = 'assets/slots/desk.avif';
+        $b['posts'][0]['body_html'] = '<p>Hi</p><img src="/assets/slots/desk.avif" alt="x">';
+        $this->importer->import($this->siteId, $b);
+        $posts = new PostRepository($this->pdo, new SiteContext($this->siteId));
+        $this->assertSame('https://www.coastalcopy.com/assets/slots/desk.avif', $posts->findBySlug('hello')['cover_image']);
+
+        $b['images'] = ['assets/slots/desk.avif' => $avif];
+        $bad = $b;
+        $bad['images'] = ['assets/slots/desk.avif' => base64_encode('not an image')];
+        $r = $this->importer->import($this->siteId, $bad);
+        $this->assertSame(0, $r['images_repaired']);
+        $this->assertNotEmpty(array_filter($r['warnings'], fn ($w) => str_contains($w, 'assets/slots/desk.avif')), 'fehlgeschlagener Nachtrag wird gemeldet');
+
+        $r = $this->importer->import($this->siteId, $b);
+        $this->assertSame(0, $r['posts']);
+        $this->assertSame(1, $r['images_repaired']);
+        $post = $posts->findBySlug('hello');
+        $this->assertMatchesRegularExpression('#^/media/\d+/[a-f0-9]{16}\.(webp|avif)$#', $post['cover_image']);
+        $this->assertStringContainsString('src="' . $post['cover_image'] . '"', $post['body_html']);
+        $file = basename($post['cover_image']);
+        $this->assertNotNull((new ImageStore($this->dir))->pathFor($this->siteId, $file));
+        $r = $this->importer->import($this->siteId, $b);
+        $this->assertSame(0, $r['images_repaired']);
     }
 
     public function testDoesNotTouchOtherSites(): void

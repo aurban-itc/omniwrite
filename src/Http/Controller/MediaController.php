@@ -22,7 +22,11 @@ final class MediaController
             return Response::text('Not found', 404);
         }
         return new Response(200, [
-            'Content-Type' => str_ends_with($path, '.png') ? 'image/png' : 'image/webp',
+            'Content-Type' => match (true) {
+                str_ends_with($path, '.png') => 'image/png',
+                str_ends_with($path, '.avif') => 'image/avif',
+                default => 'image/webp',
+            },
             'X-Content-Type-Options' => 'nosniff',
             'Content-Security-Policy' => "default-src 'none'",
             'Cache-Control' => 'public, max-age=31536000, immutable',

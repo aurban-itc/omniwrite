@@ -34,8 +34,8 @@ try {
     fwrite(STDERR, 'Fehler: ' . $e->getMessage() . "\n");
     exit(1);
 }
-printf("Beiträge: %d neu, %d vorhanden | Themen: %d neu, %d vorhanden | Empfänger: %d neu, %d vorhanden | Bilder: %d\n",
-    $r['posts'], $r['posts_skipped'], $r['topics'], $r['topics_skipped'], $r['recipients'], $r['recipients_skipped'], $r['images']);
+printf("Beiträge: %d neu, %d vorhanden | Themen: %d neu, %d vorhanden | Empfänger: %d neu, %d vorhanden | Bilder: %d (in %d vorhandenen Beiträgen nachgetragen)\n",
+    $r['posts'], $r['posts_skipped'], $r['topics'], $r['topics_skipped'], $r['recipients'], $r['recipients_skipped'], $r['images'], $r['images_repaired']);
 foreach ($r['warnings'] as $w) {
     echo "Hinweis: $w\n";
 }

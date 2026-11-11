@@ -84,3 +84,5 @@ Phase 6 (API und Einbettung): Öffentliche, schreibgeschützte JSON-API für ver
 
 
 Phase 7 (Coastal-Umzug): `tools/coastal-export.php` (eigenständig, läuft auf dem alten Hosting) schreibt Beiträge, Themen, Empfänger, Einstellungen und Bilder in eine JSON-Datei; `php bin/import-coastal.php <kürzel> export.json` spielt sie wiederholbar in eine Site ein; `php bin/coastal-redirects.php export.json https://insights.coastalcopy.com` erzeugt die 301-Regeln für die alten `/insights/…`-URLs. Ablauf: `docs/coastal-migration.md`. Die Push-Connectors (Webhook, GitHub, SFTP) folgen separat.
+
+Phase 7b (Komponente und Bilder): `public/assets/blog-widget.js` bettet Liste und Artikel im Design der einbettenden Seite ein (`docs/blog-widget.md`). Bilder im AVIF-Format werden jetzt übernommen (neu kodiert, wenn PHP es kann, sonst unverändert abgelegt); ein erneuter Coastal-Import trägt Bilder in schon vorhandenen Beiträgen nach.

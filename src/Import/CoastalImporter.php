@@ -45,7 +45,7 @@ final class CoastalImporter
         $topics = new TopicRepository($this->pdo, $ctx);
         $recipients = new RecipientRepository($this->pdo, $ctx);
         $settings = new SiteSettingsRepository($this->pdo, $ctx);
-        $r = ['posts' => 0, 'posts_skipped' => 0, 'topics' => 0, 'topics_skipped' => 0, 'recipients' => 0, 'recipients_skipped' => 0, 'images' => 0, 'warnings' => []];
+        $r = ['posts' => 0, 'posts_skipped' => 0, 'topics' => 0, 'topics_skipped' => 0, 'recipients' => 0, 'recipients_skipped' => 0, 'images' => 0, 'images_repaired' => 0, 'warnings' => []];
         $imageMap = [];
 
         // Themen zuerst: Beiträge verweisen darauf. Alt-ID => neue ID.
@@ -90,8 +90,10 @@ final class CoastalImporter
                 $r['warnings'][] = 'Beitrag ohne Slug oder Titel übersprungen.';
                 continue;
             }
-            if ($posts->slugTaken($slug)) {
+            $existing = $posts->findBySlug($slug);
+            if ($existing !== null) {
                 $r['posts_skipped']++;
+                $this->repairImages($posts, $existing, $siteId, $origin, (array) ($bundle['images'] ?? []), $imageMap, $r);
                 continue;
             }
             $cover = $this->resolveImage($siteId, (string) ($p['cover_image'] ?? ''), $origin, (array) ($bundle['images'] ?? []), $imageMap, $r);
@@ -147,6 +149,47 @@ final class CoastalImporter
             $settings->set(TopicService::CURSOR_ID_KEY, (string) $byOrder[(int) $bs['topic_cursor']]);
         }
         return $r;
+    }
+
+    /**
+     * Ein früherer Import hat Bilder, die er nicht übernehmen konnte, als Verweis auf die alte Adresse gelassen.
+     * Bei einem erneuten Import werden solche Verweise ersetzt, sobald das Bild im Export steht und gespeichert werden kann.
+     *
+     * @param array<string, mixed> $post @param array<string, string> $bundleImages @param array<string, string> $map @param array<string, mixed> $r
+     */
+    private function repairImages(PostRepository $posts, array $post, int $siteId, string $origin, array $bundleImages, array &$map, array &$r): void
+    {
+        $prefix = $origin . '/assets/';
+        $cover = (string) $post['cover_image'];
+        $body = (string) $post['body_html'];
+        if (!str_starts_with($cover, $prefix) && !str_contains($body, $prefix)) {
+            return;
+        }
+        $warnings = [];
+        $scratch = ['warnings' => &$warnings, 'images' => 0];
+        $newCover = str_starts_with($cover, $prefix) && isset($bundleImages[substr($cover, strlen($origin) + 1)])
+            ? $this->resolveImage($siteId, $cover, $origin, $bundleImages, $map, $scratch) : $cover;
+        $newBody = (string) preg_replace_callback('#(<img\b[^>]*?\bsrc=)(["\'])(' . preg_quote($prefix, '#') . '[^"\']+)\2#i', function (array $m) use ($siteId, $origin, $bundleImages, &$map, &$scratch): string {
+            $path = substr($m[3], strlen($origin) + 1);
+            return $m[1] . $m[2] . (isset($bundleImages[$path]) ? $this->resolveImage($siteId, $m[3], $origin, $bundleImages, $map, $scratch) : $m[3]) . $m[2];
+        }, $body);
+        if ($newCover !== $cover || $newBody !== $body) {
+            $changed = [];
+            if ($newCover !== $cover && !str_starts_with($newCover, $prefix)) {
+                $changed['cover_image'] = $newCover;
+            }
+            if ($newBody !== $body) {
+                $changed['body_html'] = $newBody;
+            }
+            if ($changed !== []) {
+                $posts->update((int) $post['id'], $changed);
+                $r['images_repaired']++;
+            }
+        }
+        $r['images'] += $scratch['images'];
+        foreach ($warnings as $w) {
+            $r['warnings'][] = $w;
+        }
     }
 
     /** @param array<string, string> $bundleImages @param array<string, string> $map @param array<string, mixed> $r */

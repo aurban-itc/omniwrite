@@ -133,6 +133,14 @@ final class PostRepository extends SiteScopedRepository
         return $stmt->fetch() ?: null;
     }
 
+    /** @return array<string, mixed>|null */
+    public function findBySlug(string $slug): ?array
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM posts WHERE ' . $this->scopedWhere('slug = :slug'));
+        $stmt->execute(['site_id' => $this->site->siteId, 'slug' => $slug]);
+        return $stmt->fetch() ?: null;
+    }
+
     public function slugTaken(string $slug, int $exceptId = 0): bool
     {
         $stmt = $this->pdo->prepare('SELECT 1 FROM posts WHERE ' . $this->scopedWhere('slug = :slug AND id <> :id'));

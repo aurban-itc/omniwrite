@@ -233,7 +233,7 @@ return [
     'admin.posts_count' => '{n} Beiträge, {p} veröffentlicht',
     'admin.public_view' => 'Öffentlich',
     'admin.import_intro' => 'Spielt den Export des alten Coastal-Blogs (export.json aus tools/coastal-export.php) in eine bestehende Website ein. Wiederholbar: Vorhandenes wird übersprungen, nichts wird neu veröffentlicht. Vorher Account und Website anlegen.',
-    'admin.import_done' => 'Import fertig. Beiträge: {posts} neu, {posts_skipped} vorhanden. Themen: {topics} neu, {topics_skipped} vorhanden. Empfänger: {recipients} neu, {recipients_skipped} vorhanden. Bilder: {images}.',
+    'admin.import_done' => 'Import fertig. Beiträge: {posts} neu, {posts_skipped} vorhanden. Themen: {topics} neu, {topics_skipped} vorhanden. Empfänger: {recipients} neu, {recipients_skipped} vorhanden. Bilder: {images} übernommen, davon in {images_repaired} vorhandenen Beiträgen nachgetragen.',
     'admin.import_no_sites' => 'Es gibt noch keine Website als Ziel.',
     'admin.import_site' => 'Ziel-Website',
     'admin.import_file' => 'Exportdatei (export.json)',
