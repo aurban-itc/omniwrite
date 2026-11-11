@@ -74,7 +74,9 @@ final class ImageStore
         $dir = $this->dir($siteId);
         $files = is_dir($dir) ? array_values(array_filter(scandir($dir) ?: [], static fn (string $f): bool => preg_match(self::FILE_PATTERN, $f) === 1)) : [];
         return [
-            'base' => $base, 'base_real' => (string) (realpath($base) ?: ''), 'exists' => is_dir($base), 'writable' => is_dir($base) && is_writable($base),
+            'base' => $base, 'base_real' => (string) (realpath($base) ?: ''), 'exists' => is_dir($base),
+            // Schreibbar heißt: der Ordner der Website ist es, oder er fehlt und der Basisordner erlaubt, ihn anzulegen.
+            'writable' => is_dir($dir) ? is_writable($dir) : (is_dir($base) && is_writable($base)),
             'dir' => $dir, 'dir_exists' => is_dir($dir), 'count' => count($files), 'sample' => array_slice($files, 0, 12),
         ];
     }
