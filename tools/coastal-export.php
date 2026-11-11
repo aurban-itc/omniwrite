@@ -10,7 +10,8 @@ declare(strict_types=1);
  *
  * 2) Browser, nur vorübergehend (wenn weder SSH noch Cron gehen): Datei in public_html legen, unten WEB_TOKEN auf
  *    einen langen Zufallswert setzen und https://<domain>/coastal-export.php?t=<WEB_TOKEN> aufrufen. Der Download startet,
- *    danach löscht die Datei sich selbst. Ohne gesetzten Token tut der Browser-Aufruf nichts. Bei Fehlern die Datei sofort löschen.
+ *    danach löscht die Datei sich selbst. Liegt die Datei in einem Unterordner (z. B. api/), wird der darüberliegende Ordner als Webroot genommen.
+ *    Coastals .htaccess sperrt PHP außer submit.php: dort in api/ zusätzlich eine .htaccess mit <Files "coastal-export.php"> Require all granted </Files> anlegen (beides danach löschen). Ohne gesetzten Token tut der Browser-Aufruf nichts. Bei Fehlern die Datei sofort löschen.
  *
  * Die Ausgabe enthält Beiträge (auch Entwürfe), Themen, Einstellungen, Empfänger und die verwendeten Bilder (base64), aber KEINE
  * Zugangsdaten. Nach dem Import überall löschen: sie enthält Empfänger-E-Mail-Adressen.
@@ -127,7 +128,7 @@ try {
     if ($config === null) {
         throw new RuntimeException('_private/config.php nicht gefunden.');
     }
-    $json = json_encode(coastal_export($config, __DIR__), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+    $json = json_encode(coastal_export($config, is_dir(__DIR__ . '/assets') ? __DIR__ : dirname(__DIR__)), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 } catch (Throwable $e) {
     http_response_code(500);
     header('Content-Type: text/plain; charset=utf-8');
