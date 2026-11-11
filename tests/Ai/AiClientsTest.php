@@ -75,6 +75,17 @@ final class AiClientsTest extends TestCase
         (new OpenAiImageClient($http, 'k'))->generate('p');
     }
 
+    public function testImageClientFallsBackWhenModelDoesNotExist(): void
+    {
+        $http = (new FakeHttpClient())
+            ->push(400, '{"error":{"code":"invalid_value","message":"the model \'gpt-image-1\' does not exist"}}')
+            ->pushImage('RAW');
+        self::assertSame('RAW', (new OpenAiImageClient($http, 'k'))->generate('p'));
+        self::assertCount(2, $http->requests);
+        self::assertSame('gpt-image-1', json_decode($http->requests[0]['json'], true)['model']);
+        self::assertSame('gpt-image-1.5', $http->lastPayload()['model']);
+    }
+
     public function testContentAiSanitizesOutputAndBuildsPromptWithSiteContext(): void
     {
         $http = (new FakeHttpClient())->pushToolUse(FakeHttpClient::post());
