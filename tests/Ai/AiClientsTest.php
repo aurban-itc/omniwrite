@@ -86,6 +86,15 @@ final class AiClientsTest extends TestCase
         self::assertSame('gpt-image-1.5', $http->lastPayload()['model']);
     }
 
+    public function testImageClientFallsBackWhenOrganizationIsNotVerifiedForModel(): void
+    {
+        $http = (new FakeHttpClient())
+            ->push(403, '{"error":{"code":"organization_verification_required","message":"Your organization must be verified to use the model gpt-image-1"}}')
+            ->pushImage('RAW');
+        self::assertSame('RAW', (new OpenAiImageClient($http, 'k'))->generate('p'));
+        self::assertCount(2, $http->requests);
+    }
+
     public function testContentAiSanitizesOutputAndBuildsPromptWithSiteContext(): void
     {
         $http = (new FakeHttpClient())->pushToolUse(FakeHttpClient::post());

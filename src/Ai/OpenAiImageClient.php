@@ -51,7 +51,7 @@ final class OpenAiImageClient implements ImageModel
                 break;
             }
             $msg = is_array($json) ? strtolower((string) ($json['error']['message'] ?? '') . ' ' . (string) ($json['error']['code'] ?? '')) : '';
-            $unknownModel = in_array($res['status'], [400, 403, 404], true) && str_contains($msg, 'model') && (str_contains($msg, 'does not exist') || str_contains($msg, 'not found') || str_contains($msg, 'access'));
+            $unknownModel = in_array($res['status'], [400, 403, 404], true) && str_contains($msg, 'model') && (str_contains($msg, 'does not exist') || str_contains($msg, 'not found') || str_contains($msg, 'access') || str_contains($msg, 'verif'));
             if (!$unknownModel) {
                 break;
             }
