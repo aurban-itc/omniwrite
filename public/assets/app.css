@@ -1,0 +1,123 @@
+/* OmniWrite Portal – Design im Stil von urbanlabs.ai (dunkel, technisch, Akzent-Verlauf).
+   Alle Farben/Schriften sind als Tokens in :root hinterlegt und dort zentral anpassbar. */
+@font-face{font-family:"Inter";font-style:normal;font-weight:100 900;font-display:swap;src:url(/assets/fonts/inter-latin-wght-normal.woff2) format("woff2-variations")}
+@font-face{font-family:"Space Grotesk";font-style:normal;font-weight:300 700;font-display:swap;src:url(/assets/fonts/space-grotesk-latin-wght-normal.woff2) format("woff2-variations")}
+
+:root{
+  --font-body:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-head:"Space Grotesk","Inter",system-ui,sans-serif;
+  --bg:#07090f;--bg-glow-a:rgba(99,102,241,.22);--bg-glow-b:rgba(34,211,238,.12);
+  --surface:#0f131c;--surface-2:#151a26;--line:#222a3a;--line-strong:#2f3a52;
+  --fg:#eef1f8;--muted:#8d97ac;
+  --accent:#6366f1;--accent-2:#22d3ee;--accent-fg:#ffffff;
+  --grad:linear-gradient(135deg,#6366f1 0%,#22d3ee 100%);
+  --ok:#4ade80;--err:#ff7a8a;--warn:#fbbf24;
+  --radius:14px;--radius-sm:10px;
+  --shadow:0 10px 40px -12px rgba(0,0,0,.6);
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){:root{
+  --bg:#f5f7fb;--bg-glow-a:rgba(99,102,241,.14);--bg-glow-b:rgba(34,211,238,.10);
+  --surface:#ffffff;--surface-2:#f0f3f9;--line:#e1e6f0;--line-strong:#c9d1e2;
+  --fg:#0d1220;--muted:#5a6479;--accent:#4f46e5;--accent-2:#0891b2;
+  --ok:#15803d;--err:#c81e3a;--warn:#a16207;
+  --shadow:0 10px 30px -12px rgba(30,41,80,.18);color-scheme:light}}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;font:16px/1.6 var(--font-body);color:var(--fg);background:var(--bg);
+  background-image:radial-gradient(60rem 30rem at 85% -10%,var(--bg-glow-a),transparent 60%),radial-gradient(45rem 28rem at -10% 0,var(--bg-glow-b),transparent 60%);
+  background-repeat:no-repeat;-webkit-font-smoothing:antialiased}
+.wrap{max-width:62rem;margin:0 auto;padding:0 20px}
+main{padding:2.5rem 0 4rem;max-width:62rem;margin:0 auto;padding-left:20px;padding-right:20px}
+
+/* Typografie */
+h1,h2,h3{font-family:var(--font-head);letter-spacing:-.02em;line-height:1.15;margin:0 0 .6em}
+h1{font-size:clamp(1.9rem,4vw,2.8rem);font-weight:700}
+h1 small{font-family:var(--font-body);font-size:.45em;font-weight:500;letter-spacing:0}
+h2{font-size:1.5rem;font-weight:600;margin-top:2.2rem}
+h3{font-size:1.1rem;font-weight:600;margin-top:1.8rem}
+p{margin:.5em 0 1em}
+small,.muted{color:var(--muted)}
+a{color:var(--accent-2);text-decoration:none;text-underline-offset:3px}
+a:hover{text-decoration:underline}
+code,pre{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.88em}
+code{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.1em .4em;word-break:break-all}
+pre{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem;overflow:auto}
+pre code{background:none;border:0;padding:0;word-break:normal}
+hr{border:0;border-top:1px solid var(--line);margin:2rem 0}
+
+/* Kopfzeile */
+nav.topbar{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  background:color-mix(in srgb,var(--bg) 78%,transparent);border-bottom:1px solid var(--line)}
+nav.topbar .wrap{display:flex;align-items:center;gap:1.4rem;min-height:64px;flex-wrap:wrap;padding-top:.4rem;padding-bottom:.4rem}
+nav.topbar .grow{flex:1}
+nav.topbar form{display:inline;margin:0}
+nav.topbar a{color:var(--muted);font-size:.95rem;font-weight:500;transition:color .15s}
+nav.topbar a:hover{color:var(--fg);text-decoration:none}
+nav.topbar .user{color:var(--muted);font-size:.9rem}
+.brand{display:inline-flex;align-items:center;gap:.6rem;font-family:var(--font-head);font-weight:700;font-size:1.2rem;letter-spacing:-.02em;color:var(--fg)!important}
+.brand:hover{text-decoration:none!important}
+.brand-mark{width:28px;height:28px;border-radius:9px;background:var(--grad);display:inline-grid;place-items:center;color:#fff;font-size:.95rem;box-shadow:0 0 22px -2px var(--accent)}
+nav.topbar a.cta{color:var(--accent-fg);background:var(--grad);padding:.5rem 1.1rem;border-radius:999px;font-weight:600;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase}
+nav.topbar a.cta:hover{filter:brightness(1.1)}
+
+/* Site-Untermenü */
+.subnav{display:flex;flex-wrap:wrap;gap:.35rem;margin:0 0 2rem;padding:.35rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;width:fit-content;max-width:100%}
+.subnav a{color:var(--muted);padding:.4rem 1rem;border-radius:999px;font-size:.9rem;font-weight:500}
+.subnav a:hover{color:var(--fg);text-decoration:none;background:var(--surface-2)}
+.subnav a.active{color:#fff;background:var(--grad)}
+
+/* Karten / Panels */
+.card,main>form:not([style]),main>.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:1.2rem 1.4rem;margin:1rem 0;box-shadow:var(--shadow)}
+.card{transition:border-color .15s,transform .15s}
+a.card:hover,.card:hover{border-color:var(--line-strong)}
+main>form:not([style]){max-width:40rem;padding:1.6rem}
+main>form:not([style]) label:first-of-type{margin-top:0}
+.card .card{box-shadow:none;background:var(--surface-2)}
+
+/* Formulare */
+label{display:block;margin:1.1rem 0 .35rem;font-size:.88rem;font-weight:600;color:var(--muted);letter-spacing:.01em}
+input,select,textarea{width:100%;padding:.7rem .9rem;font:inherit;color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);transition:border-color .15s,box-shadow .15s}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.7}
+input:focus,select:focus,textarea:focus,.area:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
+input[type=checkbox],input[type=radio]{width:auto;accent-color:var(--accent);margin-right:.4rem}
+input[type=color]{padding:.2rem;height:2.6rem}
+label:has(>input[type=checkbox]),label:has(>input[type=radio]){font-weight:500;color:var(--fg)}
+textarea{resize:vertical}
+
+/* Buttons */
+button,.btn{display:inline-block;margin-top:1.1rem;padding:.7rem 1.4rem;font:inherit;font-size:.82rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;color:var(--accent-fg);background:var(--grad);border:0;border-radius:999px;transition:filter .15s,transform .1s,box-shadow .15s;box-shadow:0 8px 24px -10px var(--accent)}
+[hidden],button[hidden],.btn[hidden]{display:none!important}
+button:hover{filter:brightness(1.12)}
+button:active{transform:translateY(1px)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+button:disabled{opacity:.45;cursor:not-allowed;filter:none;box-shadow:none}
+.card button,.toolbar button,.actions button,td button,button.sec{margin-top:0;padding:.4rem .9rem;font-size:.75rem;color:var(--fg);background:var(--surface-2);border:1px solid var(--line-strong);box-shadow:none}
+.card button:hover,.toolbar button:hover,.actions button:hover,button.sec:hover{border-color:var(--accent);filter:none}
+button.link{margin:0;padding:0;font:inherit;font-size:.95rem;font-weight:500;letter-spacing:0;text-transform:none;color:var(--muted);background:none;border:0;box-shadow:none;border-radius:0}
+button.link:hover{color:var(--fg);filter:none}
+.actions{margin:1.2rem 0;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+
+/* Status / Hinweise */
+.err{color:var(--err);margin:.3rem 0;font-size:.92rem}
+.ok{color:var(--ok)}
+.pill{display:inline-block;padding:.12rem .7rem;border-radius:999px;background:var(--surface-2);border:1px solid var(--line-strong);color:var(--muted);font-size:.72rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle}
+.pill.published{background:color-mix(in srgb,var(--ok) 16%,transparent);border-color:color-mix(in srgb,var(--ok) 45%,transparent);color:var(--ok)}
+.pill.in_review{background:color-mix(in srgb,var(--warn) 16%,transparent);border-color:color-mix(in srgb,var(--warn) 45%,transparent);color:var(--warn)}
+.pill.declined{background:color-mix(in srgb,var(--err) 16%,transparent);border-color:color-mix(in srgb,var(--err) 45%,transparent);color:var(--err)}
+.banner{border-color:var(--err)!important;background:color-mix(in srgb,var(--err) 10%,var(--surface))!important;display:flex;flex-wrap:wrap;gap:1rem;align-items:center;justify-content:space-between;border-radius:0!important;margin:0!important;box-shadow:none!important}
+.banner form{margin:0}
+
+/* Editor */
+.toolbar{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.4rem}
+.area{min-height:16rem;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem;margin-top:.4rem;line-height:1.7}
+.area[hidden]{display:none}
+.area img{max-width:100%;border-radius:var(--radius-sm)}
+.qr{border-radius:var(--radius-sm);padding:.6rem}
+
+@media (max-width:640px){
+  nav.topbar .wrap{gap:.9rem}
+  main{padding-top:1.6rem}
+  main>form:not([style]),.card{padding:1rem}
+}
