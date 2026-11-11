@@ -56,5 +56,5 @@ $token = (string) ($token ?? '');
     <a href="/review/<?= $e($token) ?>/publish"><?= $e($t('review.publish_btn')) ?></a> ·
     <a href="/review/<?= $e($token) ?>/decline"><?= $e($t('review.decline_btn')) ?></a>
   </p>
-  <script src="/assets/editor.js" defer></script>
+  <script src="/assets/editor.js?v=<?= (int) @filemtime(__DIR__ . '/../public/assets/editor.js') ?>" defer></script>
 <?php endif; ?>
