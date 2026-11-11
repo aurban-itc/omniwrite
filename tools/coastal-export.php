@@ -126,6 +126,15 @@ if (!hash_equals(WEB_TOKEN, $given)) {
 }
 header('Cache-Control: no-store');
 header('X-Robots-Tag: noindex');
+// Genau ein Aufruf darf exportieren: rename() ist atomar, wer die Datei nicht umbenennen kann (weil ein anderer Aufruf sie schon hat), bekommt 404.
+$claimed = __DIR__ . '/.' . basename(__FILE__) . '.claimed';
+if (!@rename(__FILE__, $claimed)) {
+    http_response_code(404);
+    exit;
+}
+$restore = static function () use ($claimed): void {      // Export kam nicht beim Browser an oder schlug fehl: Datei wieder bereitstellen, damit ein neuer Versuch geht
+    @rename($claimed, __FILE__);
+};
 $config = null;
 foreach ([__DIR__ . '/_private/config.php', dirname(__DIR__) . '/_private/config.php'] as $c) {
     if (is_file($c)) {
@@ -133,22 +142,37 @@ foreach ([__DIR__ . '/_private/config.php', dirname(__DIR__) . '/_private/config
         break;
     }
 }
+// Webroot = der Ordner mit den Blog-Bildern (assets/blog oder assets/slots): neben der Datei oder eine Ebene darüber (api/).
+$webroot = dirname(__DIR__);
+foreach ([__DIR__, dirname(__DIR__)] as $c) {
+    if (is_dir($c . '/assets/blog') || is_dir($c . '/assets/slots')) {
+        $webroot = $c;
+        break;
+    }
+}
 try {
     if ($config === null) {
         throw new RuntimeException('_private/config.php nicht gefunden.');
     }
-    $json = json_encode(coastal_export($config, is_dir(__DIR__ . '/assets') ? __DIR__ : dirname(__DIR__)), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+    $json = json_encode(coastal_export($config, $webroot), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 } catch (Throwable $e) {
+    $restore();
     http_response_code(500);
     header('Content-Type: text/plain; charset=utf-8');
     error_log('coastal-export.php: ' . $e->getMessage());     // Details nur ins Fehlerlog, nicht an den Browser
-    echo 'Export fehlgeschlagen. Bitte die Datei löschen und den Fehler im Server-Log prüfen.';
+    echo 'Export fehlgeschlagen. Fehler im Server-Log prüfen; die Datei bleibt für einen neuen Versuch liegen.';
     exit;
 }
+ignore_user_abort(true);
 header('Content-Type: application/json; charset=utf-8');
 header('Content-Disposition: attachment; filename="export.json"');
 header('Content-Length: ' . strlen($json));
 echo $json;
-if (!@unlink(__FILE__)) {
-    error_log('coastal-export.php konnte sich nicht selbst löschen: bitte manuell entfernen');
+if (function_exists('flush')) {
+    @flush();
+}
+if (connection_aborted()) {
+    $restore();                                                   // Download unterbrochen: Datei bleibt für einen neuen Versuch
+} elseif (!@unlink($claimed)) {
+    error_log('coastal-export.php konnte die umbenannte Datei nicht löschen: bitte ' . $claimed . ' manuell entfernen');
 }
