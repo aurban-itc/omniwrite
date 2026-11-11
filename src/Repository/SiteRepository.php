@@ -54,4 +54,15 @@ class SiteRepository
         )->execute([$accountId, $slug, $name, $locale, $timezone]);
         return (int) $this->pdo->lastInsertId();
     }
+
+    /** Alle Sites mit Account-Name und Zahl der Beiträge, für den Superadmin. @return list<array<string, mixed>> */
+    public function allWithAccount(): array
+    {
+        return $this->pdo->query(
+            'SELECT s.*, a.name AS account_name,
+                    (SELECT COUNT(*) FROM posts p WHERE p.site_id = s.id) AS post_count,
+                    (SELECT COUNT(*) FROM posts p WHERE p.site_id = s.id AND p.status = \'published\') AS published_count
+             FROM sites s JOIN accounts a ON a.id = s.account_id ORDER BY a.id, s.id'
+        )->fetchAll();
+    }
 }

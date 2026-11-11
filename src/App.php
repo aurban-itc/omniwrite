@@ -54,6 +54,8 @@ use OmniWrite\Service\ReviewService;
 use OmniWrite\Service\ScheduleService;
 use OmniWrite\Service\WeeklyRunner;
 use OmniWrite\Service\PostService;
+use OmniWrite\Import\CoastalImporter;
+use OmniWrite\Service\AdminService;
 use OmniWrite\Service\SiteAccess;
 use OmniWrite\Service\SiteService;
 use OmniWrite\Service\SiteSettingsService;
@@ -104,7 +106,11 @@ final class App
         $tfaC = new TwoFactorController($view, $twoFactor, $users);
         $impC = new ImpersonationController($users, $audit);
         $dash = new DashboardController($view, $accounts, $sites);
-        $admin = new AdminController($view, $users, $accounts, $audit);
+        $adminService = new AdminService($pdo, $users, $accounts, new PasswordHasher(), $audit);
+        $admin = new AdminController(
+            $view, $users, $accounts, new SiteRepository($pdo), $adminService, $sites,
+            new CoastalImporter($pdo, new ImageStore((string) $config->get('storage.path', $root . '/storage'))),
+        );
 
         $siteAccess = new SiteAccess(new SiteRepository($pdo), $accounts);
         $postService = new PostService($pdo, $audit);
@@ -212,6 +218,21 @@ final class App
         $router->add('POST', '/sites/{slug}/settings', $settingsC->save(...), 'user');
         $router->add('GET', '/admin', $admin->index(...), 'superadmin');
         $router->add('POST', '/admin/users/{id}/activate', $admin->activate(...), 'superadmin');
+        $router->add('POST', '/admin/users/{id}/reject', $admin->reject(...), 'superadmin');
+        $router->add('POST', '/admin/users/{id}/disable', $admin->disable(...), 'superadmin');
+        $router->add('POST', '/admin/users/{id}/enable', $admin->enable(...), 'superadmin');
+        $router->add('POST', '/admin/users/{id}/password', $admin->resetPassword(...), 'superadmin');
+        $router->add('GET', '/admin/accounts/new', $admin->newAccountForm(...), 'superadmin');
+        $router->add('POST', '/admin/accounts', $admin->createAccount(...), 'superadmin');
+        $router->add('GET', '/admin/accounts/{id}', $admin->account(...), 'superadmin');
+        $router->add('POST', '/admin/accounts/{id}', $admin->rename(...), 'superadmin');
+        $router->add('POST', '/admin/accounts/{id}/members', $admin->addMember(...), 'superadmin');
+        $router->add('POST', '/admin/accounts/{id}/members/{uid}/role', $admin->memberRole(...), 'superadmin');
+        $router->add('POST', '/admin/accounts/{id}/members/{uid}/remove', $admin->removeMember(...), 'superadmin');
+        $router->add('POST', '/admin/accounts/{id}/sites', $admin->createSite(...), 'superadmin');
+        $router->add('GET', '/admin/sites', $admin->sites(...), 'superadmin');
+        $router->add('GET', '/admin/import', $admin->importForm(...), 'superadmin');
+        $router->add('POST', '/admin/import', $admin->import(...), 'superadmin');
 
         return new Kernel($router, $users, $csrf, $twoFactor, $audit, (string) $config->get('app.default_locale', 'de'), $publicBlog, $publicRouter, $portalHost);
     }
