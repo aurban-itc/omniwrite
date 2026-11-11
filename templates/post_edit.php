@@ -53,6 +53,7 @@ $err = static fn (string $k): string => isset($errors[$k]) ? '<p class="err">' .
     <label for="cover_image"><?= $e($t('post.cover')) ?></label>
     <input id="cover_image" name="cover_image" maxlength="500" value="<?= $e($v('cover_image')) ?>" placeholder="https://…">
     <?= $err('cover_image') ?>
+    <img id="cover-preview" class="cover-preview" alt="" hidden>
     <label for="image_prompt"><?= $e($t('ai.image_prompt')) ?></label>
     <textarea id="image_prompt" name="image_prompt" rows="2" maxlength="1000"><?= $e($v('image_prompt')) ?></textarea>
     <button type="button" id="img-gen"<?= empty($imageReady) ? ' disabled' : '' ?>><?= $e($t('ai.image_btn')) ?></button> <small id="img-msg"></small>

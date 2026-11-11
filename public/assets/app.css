@@ -76,6 +76,9 @@ main>form:not([style]){max-width:80rem;padding:1.6rem}
 main>form#post-form{max-width:none}
 #post-form details>summary{cursor:pointer;font-weight:600;margin-bottom:.4rem}
 @media (min-width:1000px){#post-form details[open]{display:grid;grid-template-columns:1fr 1fr;column-gap:2rem}#post-form details>summary,#post-form details>label[for=excerpt],#post-form details>#excerpt,#post-form details>label[for=meta_description],#post-form details>#meta_description,#post-form details>label[for=image_prompt],#post-form details>#image_prompt,#post-form details>.err,#post-form details>#img-gen{grid-column:1/-1}}
+#post-form .cover-preview{display:block;max-width:100%;max-height:22rem;margin-top:.7rem;border-radius:var(--radius-sm);border:1px solid var(--line);object-fit:cover}
+#post-form .cover-preview[hidden]{display:none}
+@media (min-width:1000px){#post-form details>.cover-preview{grid-column:1/-1}}
 #rte,#rte-source{min-height:28rem}
 .ai-hint{display:block;margin-top:.6rem}
 main>form:not([style]) label:first-of-type{margin-top:0}

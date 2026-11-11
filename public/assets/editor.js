@@ -102,13 +102,25 @@
         .then(function () { busy(seo, false); });
     });
   }
+  var cover = document.getElementById('cover_image');
+  var preview = document.getElementById('cover-preview');
+  function showCover() {
+    if (!cover || !preview) return;
+    var v = cover.value.trim();
+    if (/^(https:\/\/|\/)/.test(v) && v.indexOf('//') !== 0) { preview.src = v; preview.hidden = false; } else { preview.hidden = true; preview.removeAttribute('src'); }
+  }
+  if (cover && preview) {
+    preview.addEventListener('error', function () { preview.hidden = true; });
+    cover.addEventListener('input', showCover);
+    showCover();
+  }
   var img = document.getElementById('img-gen');
   if (img) {
     img.addEventListener('click', function () {
       var msg = document.getElementById('img-msg');
       busy(img, true); msg.textContent = '…';
       call('image', { prompt: document.getElementById('image_prompt').value })
-        .then(function (j) { document.getElementById('cover_image').value = j.path; msg.textContent = '✓ ' + j.path; })
+        .then(function (j) { document.getElementById('cover_image').value = j.path; showCover(); msg.textContent = '✓ ' + j.path; })
         .catch(function (e) { msg.textContent = e.message; })
         .then(function () { busy(img, false); });
     });
