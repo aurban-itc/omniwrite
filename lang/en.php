@@ -94,6 +94,7 @@ return [
     'post.notice.generated' => 'Draft written. Please read it carefully before anything is published.',
     'topic.suggested_added' => '{n} topic suggestions added. Accept the ones you like.',
     'err.ai_not_configured' => 'AI is not set up yet (API key missing on the server).',
+    'err.ai_image_not_configured' => 'Image generation is not set up (OpenAI API key missing on the server).',
     'err.ai_unreachable' => 'The AI service did not respond. Please try again.', 'err.ai_key_rejected' => 'The AI service rejected the access. Please tell support.',
     'err.ai_busy' => 'The AI service is busy. Please try again in a minute.', 'err.ai_failed' => 'The AI service reported an error. Please try again.',
     'err.ai_truncated' => 'The text was cut off. Please try again.', 'err.ai_unreadable' => 'The AI answer could not be read. Please try again.',

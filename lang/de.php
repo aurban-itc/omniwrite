@@ -95,6 +95,7 @@ return [
     'post.notice.generated' => 'Entwurf geschrieben. Bitte sorgfältig lesen, bevor etwas veröffentlicht wird.',
     'topic.suggested_added' => '{n} Themenvorschläge hinzugefügt. Übernehmen Sie, was passt.',
     'err.ai_not_configured' => 'Die KI ist noch nicht eingerichtet (API-Schlüssel fehlt auf dem Server).',
+    'err.ai_image_not_configured' => 'Bilderzeugung nicht eingerichtet (OpenAI-API-Schlüssel fehlt auf dem Server).',
     'err.ai_unreachable' => 'Der KI-Dienst antwortet nicht. Bitte erneut versuchen.', 'err.ai_key_rejected' => 'Der KI-Dienst hat den Zugang abgelehnt. Bitte den Support informieren.',
     'err.ai_busy' => 'Der KI-Dienst ist ausgelastet. Bitte in einer Minute erneut versuchen.', 'err.ai_failed' => 'Der KI-Dienst hat einen Fehler gemeldet. Bitte erneut versuchen.',
     'err.ai_truncated' => 'Der Text wurde abgeschnitten. Bitte erneut versuchen.', 'err.ai_unreadable' => 'Die Antwort der KI war nicht lesbar. Bitte erneut versuchen.',
