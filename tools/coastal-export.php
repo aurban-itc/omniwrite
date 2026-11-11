@@ -131,7 +131,8 @@ try {
 } catch (Throwable $e) {
     http_response_code(500);
     header('Content-Type: text/plain; charset=utf-8');
-    echo 'Fehler: ' . $e->getMessage();
+    error_log('coastal-export.php: ' . $e->getMessage());     // Details nur ins Fehlerlog, nicht an den Browser
+    echo 'Export fehlgeschlagen. Bitte die Datei löschen und den Fehler im Server-Log prüfen.';
     exit;
 }
 header('Content-Type: application/json; charset=utf-8');
