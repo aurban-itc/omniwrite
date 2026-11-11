@@ -71,7 +71,7 @@
   <label for="site_locale"><?= $e($t('field.locale')) ?></label>
   <select id="site_locale" name="locale"><option value="de">Deutsch</option><option value="en">English</option></select>
   <label for="timezone"><?= $e($t('field.timezone')) ?></label>
-  <input id="timezone" name="timezone" value="Europe/Berlin">
+  <?php $tzSelected = $form === 'site' ? ($old['timezone'] ?? '') : ''; include __DIR__ . '/_timezone_select.php'; ?>
   <?php if ($err('site', 'timezone') !== ''): ?><p class="err"><?= $e($t($err('site', 'timezone'))) ?></p><?php endif; ?>
   <button><?= $e($t('btn.create_site')) ?></button>
 </form>

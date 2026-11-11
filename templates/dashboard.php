@@ -20,7 +20,7 @@
   <label for="locale"><?= $e($t('field.locale')) ?></label>
   <select id="locale" name="locale"><option value="de">Deutsch</option><option value="en">English</option></select>
   <label for="timezone"><?= $e($t('field.timezone')) ?></label>
-  <input id="timezone" name="timezone" value="Europe/Berlin">
+  <?php $tzSelected = $old['timezone'] ?? ''; include __DIR__ . '/_timezone_select.php'; ?>
   <?php if (!empty($errors['timezone'])): ?><p class="err"><?= $e($t($errors['timezone'])) ?></p><?php endif; ?>
   <button><?= $e($t('btn.create_site')) ?></button>
 </form>
