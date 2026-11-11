@@ -7,7 +7,7 @@
         'posts' => $result['posts'], 'posts_skipped' => $result['posts_skipped'],
         'topics' => $result['topics'], 'topics_skipped' => $result['topics_skipped'],
         'recipients' => $result['recipients'], 'recipients_skipped' => $result['recipients_skipped'],
-        'images' => $result['images'],
+        'images' => $result['images'], 'images_repaired' => $result['images_repaired'],
     ])) ?>
     <?php foreach ($result['warnings'] as $w): ?><br><small><?= $e($w) ?></small><?php endforeach; ?>
   </div>

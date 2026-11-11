@@ -11,7 +11,7 @@ use RuntimeException;
  */
 final class ImageStore
 {
-    public const FILE_PATTERN = '/^[a-f0-9]{16}\.(webp|png)$/';
+    public const FILE_PATTERN = '/^[a-f0-9]{16}\.(webp|png|avif)$/';
 
     public function __construct(private readonly string $baseDir)
     {
@@ -21,7 +21,7 @@ final class ImageStore
     public function save(int $siteId, string $raw): string
     {
         $info = @getimagesizefromstring($raw);
-        if ($info === false || !in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP], true) || $info[0] > 8000 || $info[1] > 8000) {
+        if ($info === false || !in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP, IMAGETYPE_AVIF], true) || $info[0] > 8000 || $info[1] > 8000) {
             throw new RuntimeException('unsupported image');
         }
         $dir = $this->dir($siteId);
@@ -29,6 +29,13 @@ final class ImageStore
             throw new RuntimeException('cannot create image directory');
         }
         $name = bin2hex(random_bytes(8));
+        if ($info[2] === IMAGETYPE_AVIF && !(function_exists('gd_info') && (gd_info()['AVIF Support'] ?? false))) {
+            // Dieses PHP kann AVIF nicht neu kodieren: die (geprüfte, begrenzte) Datei unverändert ablegen, sie wird nur mit festem Typ ausgeliefert.
+            if (strlen($raw) > 8 * 1024 * 1024 || file_put_contents("$dir/$name.avif", $raw) === false) {
+                throw new RuntimeException('image could not be saved');
+            }
+            return "/media/$siteId/$name.avif";
+        }
         $im = @imagecreatefromstring($raw);
         if ($im === false) {
             throw new RuntimeException('image could not be decoded');

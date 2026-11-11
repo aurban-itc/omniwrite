@@ -232,7 +232,7 @@ return [
     'admin.posts_count' => '{n} posts, {p} published',
     'admin.public_view' => 'Public',
     'admin.import_intro' => 'Imports the old Coastal blog export (export.json from tools/coastal-export.php) into an existing website. Repeatable: existing items are skipped, nothing is newly published. Create the account and website first.',
-    'admin.import_done' => 'Import finished. Posts: {posts} new, {posts_skipped} existing. Topics: {topics} new, {topics_skipped} existing. Recipients: {recipients} new, {recipients_skipped} existing. Images: {images}.',
+    'admin.import_done' => 'Import finished. Posts: {posts} new, {posts_skipped} existing. Topics: {topics} new, {topics_skipped} existing. Recipients: {recipients} new, {recipients_skipped} existing. Images: {images} imported, {images_repaired} existing posts updated.',
     'admin.import_no_sites' => 'There is no target website yet.',
     'admin.import_site' => 'Target website',
     'admin.import_file' => 'Export file (export.json)',
