@@ -166,8 +166,9 @@ final class AdminController
     private function renderImport(Request $r, array $errors = [], ?int $selected = null, int $status = 200, ?string $detail = null, ?array $result = null): Response
     {
         return $this->view->render($r, 'admin_import', [
-            'sites' => $this->sites->allWithAccount(), 'errors' => $errors, 'selected' => $selected,
+            'sites' => $sites = $this->sites->allWithAccount(), 'errors' => $errors, 'selected' => $selected,
             'detail' => $detail, 'result' => $result,
+            'storage' => array_map(fn (array $s): array => ['site' => $s] + $this->importer->storageReport((int) $s['id']), $sites),
         ], $status);
     }
 

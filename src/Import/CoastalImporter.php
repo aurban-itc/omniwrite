@@ -196,6 +196,12 @@ final class CoastalImporter
         }
     }
 
+    /** @return array<string, mixed> Speicherort der Bilder für die Diagnose im Admin */
+    public function storageReport(int $siteId): array
+    {
+        return $this->images->report($siteId);
+    }
+
     /** True, wenn der Verweis auf ein eigenes Bild (/media/<site>/<datei>) zeigt, dessen Datei im Speicher fehlt. */
     private function isMissingMedia(string $ref, int $siteId): bool
     {

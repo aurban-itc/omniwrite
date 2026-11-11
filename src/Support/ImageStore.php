@@ -63,6 +63,22 @@ final class ImageStore
         return is_file($path) ? $path : null;
     }
 
+    /**
+     * Diagnose für den Admin: wohin geschrieben wird und was dort liegt (nur Namen, keine Inhalte).
+     *
+     * @return array{base: string, base_real: string, exists: bool, writable: bool, dir: string, dir_exists: bool, count: int, sample: list<string>}
+     */
+    public function report(int $siteId): array
+    {
+        $base = rtrim($this->baseDir, '/');
+        $dir = $this->dir($siteId);
+        $files = is_dir($dir) ? array_values(array_filter(scandir($dir) ?: [], static fn (string $f): bool => preg_match(self::FILE_PATTERN, $f) === 1)) : [];
+        return [
+            'base' => $base, 'base_real' => (string) (realpath($base) ?: ''), 'exists' => is_dir($base), 'writable' => is_dir($base) && is_writable($base),
+            'dir' => $dir, 'dir_exists' => is_dir($dir), 'count' => count($files), 'sample' => array_slice($files, 0, 12),
+        ];
+    }
+
     private function dir(int $siteId): string
     {
         return rtrim($this->baseDir, '/') . '/images/' . $siteId;

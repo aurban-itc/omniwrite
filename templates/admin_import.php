@@ -30,3 +30,17 @@
   <button><?= $e($t('admin.import_run')) ?></button>
 </form>
 <?php endif; ?>
+
+<h2><?= $e($t('admin.storage_title')) ?></h2>
+<p><small><?= $e($t('admin.storage_intro')) ?></small></p>
+<?php foreach ($storage as $st): ?>
+  <div class="card">
+    <strong><?= $e($st['site']['slug']) ?></strong>:
+    <code><?= $e($st['dir']) ?></code>
+    &middot; <?= $e($t($st['base_real'] !== '' ? 'admin.storage_found' : 'admin.storage_missing')) ?>
+    <?= $st['base_real'] !== '' ? '(' . $e($st['base_real']) . ')' : '' ?>
+    &middot; <?= $e($t($st['writable'] ? 'admin.storage_writable' : 'admin.storage_readonly')) ?>
+    &middot; <?= $e($t('admin.storage_files', ['n' => $st['count']])) ?>
+    <?php if ($st['sample'] !== []): ?><br><small><code><?= $e(implode(', ', $st['sample'])) ?></code></small><?php endif; ?>
+  </div>
+<?php endforeach; ?>
