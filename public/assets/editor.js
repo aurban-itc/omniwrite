@@ -60,8 +60,14 @@
     fd.append('_csrf', csrf);
     Object.keys(fields).forEach(function (k) { fd.append(k, fields[k]); });
     return fetch(base + '/' + path, { method: 'POST', body: fd, credentials: 'same-origin' })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (x) { if (!x.ok) throw new Error(x.j.error || 'Error'); return x.j; });
+      .then(function (r) {
+        return r.text().then(function (t) {
+          var j = null;
+          try { j = JSON.parse(t); } catch (e) { /* keine JSON-Antwort, z. B. Serverfehler oder Timeout */ }
+          if (!r.ok || j === null) throw new Error((j && j.error) || ('HTTP ' + r.status + (r.status === 504 || r.status === 502 ? ' (Zeitüberschreitung)' : '')));
+          return j;
+        });
+      });
   }
   function busy(el, on) { if (el) el.disabled = on; }
   var run = document.getElementById('ai-run');

@@ -88,6 +88,9 @@ final class AiController extends SiteController
     private function json(Request $r, callable $handler): Response
     {
         return $this->withSite($r, function (ResolvedSite $s) use ($r, $handler): Response {
+            // KI-Aufrufe dauern (bis 2 x 150 s mit Wiederholung); PHP darf nicht vorher abbrechen.
+            @set_time_limit(400);
+            @ignore_user_abort(true);
             try {
                 return Response::json($handler($s));
             } catch (ValidationException $e) {
@@ -100,6 +103,14 @@ final class AiController extends SiteController
                     $msg .= ' [' . $e->detail . ']';
                 }
                 return Response::json(['error' => $msg], 502);
+            } catch (\Throwable $e) {
+                // Unerwarteter Fehler: Details ins Log, dem Editor trotzdem eine lesbare JSON-Antwort geben.
+                error_log((string) $e);
+                $msg = $this->translator->t($r->locale, 'err.ai_failed');
+                if ($r->user?->isSuperadmin === true) {
+                    $msg .= ' [' . get_class($e) . ': ' . substr($e->getMessage(), 0, 200) . ']';
+                }
+                return Response::json(['error' => $msg], 500);
             }
         });
     }
