@@ -28,8 +28,8 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100vh;font:16px/1.6 var(--font-body);color:var(--fg);background:var(--bg);
   background-image:radial-gradient(60rem 30rem at 85% -10%,var(--bg-glow-a),transparent 60%),radial-gradient(45rem 28rem at -10% 0,var(--bg-glow-b),transparent 60%);
   background-repeat:no-repeat;-webkit-font-smoothing:antialiased}
-.wrap{max-width:62rem;margin:0 auto;padding:0 20px}
-main{padding:2.5rem 0 4rem;max-width:62rem;margin:0 auto;padding-left:20px;padding-right:20px}
+.wrap{max-width:96rem;margin:0 auto;padding:0 20px}
+main{padding:2.5rem 0 4rem;max-width:96rem;margin:0 auto;padding-left:20px;padding-right:20px}
 
 /* Typografie */
 h1,h2,h3{font-family:var(--font-head);letter-spacing:-.02em;line-height:1.15;margin:0 0 .6em}
@@ -72,7 +72,12 @@ nav.topbar a.cta:hover{filter:brightness(1.1)}
 .card,main>form:not([style]),main>.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:1.2rem 1.4rem;margin:1rem 0;box-shadow:var(--shadow)}
 .card{transition:border-color .15s,transform .15s}
 a.card:hover,.card:hover{border-color:var(--line-strong)}
-main>form:not([style]){max-width:40rem;padding:1.6rem}
+main>form:not([style]){max-width:56rem;padding:1.6rem}
+main>form#post-form{max-width:none}
+#post-form details>summary{cursor:pointer;font-weight:600;margin-bottom:.4rem}
+@media (min-width:1000px){#post-form details[open]{display:grid;grid-template-columns:1fr 1fr;column-gap:2rem}#post-form details>summary,#post-form details>label[for=excerpt],#post-form details>#excerpt,#post-form details>label[for=meta_description],#post-form details>#meta_description,#post-form details>label[for=image_prompt],#post-form details>#image_prompt,#post-form details>.err,#post-form details>#img-gen{grid-column:1/-1}}
+#rte,#rte-source{min-height:28rem}
+.ai-hint{display:block;margin-top:.6rem}
 main>form:not([style]) label:first-of-type{margin-top:0}
 .card .card{box-shadow:none;background:var(--surface-2)}
 
