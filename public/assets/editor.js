@@ -107,7 +107,7 @@
   function showCover() {
     if (!cover || !preview) return;
     var v = cover.value.trim();
-    if (/^(https:\/\/|\/)/.test(v) && v.indexOf('//') !== 0) { preview.src = v; preview.hidden = false; } else { preview.hidden = true; preview.removeAttribute('src'); }
+    if (/^https:\/\//i.test(v) || /^\/(?!\/)/.test(v)) { preview.src = v; preview.hidden = false; } else { preview.hidden = true; preview.removeAttribute('src'); }
   }
   if (cover && preview) {
     preview.addEventListener('error', function () { preview.hidden = true; });
