@@ -65,7 +65,7 @@ final class AiFlowTest extends KernelTestCase
         $img = $this->call('POST', '/sites/alpha/ai/image', ['prompt' => 'Ein Büro']);
         self::assertSame(200, $img->status);
         $path = json_decode($img->body, true)['path'];
-        self::assertMatchesRegularExpression('#^/media/' . $this->siteId . '/[a-f0-9]{16}\.(webp|png)$#', $path);
+        self::assertMatchesRegularExpression('#^/media/' . $this->siteId . '/[a-f0-9]{16}$#', $path);
 
         $media = $this->call('GET', $path);
         self::assertSame(200, $media->status);

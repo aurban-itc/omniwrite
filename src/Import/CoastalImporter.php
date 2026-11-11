@@ -93,6 +93,7 @@ final class CoastalImporter
             $existing = $posts->findBySlug($slug);
             if ($existing !== null) {
                 $r['posts_skipped']++;
+                $existing = $this->normalizeMediaUrls($posts, $existing, $siteId);
                 // Vor der Reparatur prüfen: unverändert heißt, dass der Beitrag seit dem Import nicht bearbeitet wurde.
                 $untouched = $this->date($p['updated_at'] ?? null) !== null && $this->date($p['updated_at'] ?? null) === (string) $existing['updated_at'];
                 $this->repairImages($posts, $existing, $siteId, $origin, (array) ($bundle['images'] ?? []), $imageMap, $r);
@@ -194,6 +195,24 @@ final class CoastalImporter
         foreach ($warnings as $w) {
             $r['warnings'][] = $w;
         }
+    }
+
+    /**
+     * Ältere Beiträge verweisen auf /media/<site>/<id>.webp. Der Webserver beantwortet solche Adressen selbst mit 404,
+     * deshalb wird die Endung entfernt (die Auslieferung findet die Datei auch ohne sie). Änderungszeit bleibt.
+     *
+     * @param array<string, mixed> $post @return array<string, mixed>
+     */
+    private function normalizeMediaUrls(PostRepository $posts, array $post, int $siteId): array
+    {
+        $re = '#(/media/' . $siteId . '/[a-f0-9]{16})\.(?:webp|png|avif)(?![\w.])#';
+        $cover = (string) preg_replace($re, '$1', (string) $post['cover_image']);
+        $body = (string) preg_replace($re, '$1', (string) $post['body_html']);
+        if ($cover === (string) $post['cover_image'] && $body === (string) $post['body_html']) {
+            return $post;
+        }
+        $posts->update((int) $post['id'], ['cover_image' => $cover, 'body_html' => $body, 'updated_at' => (string) $post['updated_at']]);
+        return $posts->findBySlug((string) $post['slug']) ?? $post;
     }
 
     /** @return array<string, mixed> Speicherort der Bilder für die Diagnose im Admin */

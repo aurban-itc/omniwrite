@@ -82,7 +82,7 @@ final class CoastalImporterTest extends DbTestCase
         $posts = new PostRepository($this->pdo, $ctx);
         $hello = $posts->findPublishedBySlug('hello');
         $this->assertNotNull($hello);
-        $this->assertMatchesRegularExpression('#^/media/\d+/[a-f0-9]{16}\.(webp|png)$#', $hello['cover_image']);
+        $this->assertMatchesRegularExpression('#^/media/\d+/[a-f0-9]{16}$#', $hello['cover_image']);
         $this->assertStringContainsString('src="' . $hello['cover_image'] . '"', $hello['body_html']);
         $this->assertStringContainsString('href="https://www.coastalcopy.com/Print.html"', $hello['body_html']);
         $this->assertStringContainsString('href="https://example.org/x"', $hello['body_html']);
@@ -171,7 +171,7 @@ final class CoastalImporterTest extends DbTestCase
         $this->assertSame(0, $r['posts']);
         $this->assertSame(1, $r['images_repaired']);
         $post = $posts->findBySlug('hello');
-        $this->assertMatchesRegularExpression('#^/media/\d+/[a-f0-9]{16}\.(webp|avif)$#', $post['cover_image']);
+        $this->assertMatchesRegularExpression('#^/media/\d+/[a-f0-9]{16}$#', $post['cover_image']);
         $this->assertStringContainsString('src="' . $post['cover_image'] . '"', $post['body_html']);
         $file = basename($post['cover_image']);
         $this->assertNotNull((new ImageStore($this->dir))->pathFor($this->siteId, $file));
@@ -212,7 +212,7 @@ final class CoastalImporterTest extends DbTestCase
         }
         $r = $this->importer->import($this->siteId, $b);
         $this->assertSame(0, $r['images_repaired']);
-        $this->assertSame('/media/' . $this->siteId . '/0123456789abcdef.webp', $posts->findBySlug('hello')['cover_image'], 'bearbeitetes Titelbild bleibt');
+        $this->assertSame('/media/' . $this->siteId . '/0123456789abcdef', $posts->findBySlug('hello')['cover_image'], 'bearbeitetes Titelbild bleibt (nur ohne Endung)');
         $this->assertNotEmpty(array_filter($r['warnings'], fn ($w) => str_contains($w, 'hello')));
     }
 
@@ -231,12 +231,35 @@ final class CoastalImporterTest extends DbTestCase
         $posts = new PostRepository($this->pdo, new SiteContext($this->siteId));
         $body = $posts->findBySlug('hello')['body_html'];
         $this->assertStringNotContainsString('coastalcopy.com/assets', $body);
-        preg_match_all('#src="(/media/\d+/[a-f0-9]{16}\.\w+)"#', $body, $m);
+        preg_match_all('#src="(/media/\d+/[a-f0-9]{16})"#', $body, $m);
         $this->assertCount(2, $m[1]);
         foreach ($m[1] as $u) {
             $this->assertNotNull((new ImageStore($this->dir))->pathFor($this->siteId, basename($u)), $u);
         }
         $this->assertGreaterThan(0, $r['images_repaired']);
+    }
+
+    public function testImportStripsExtensionFromExistingMediaUrls(): void
+    {
+        $b = $this->bundle();
+        $this->importer->import($this->siteId, $b);
+        $posts = new PostRepository($this->pdo, new SiteContext($this->siteId));
+        $old = $posts->findBySlug('hello');
+        $store = new ImageStore($this->dir);
+        $name = basename($old['cover_image']);
+        $file = $store->pathFor($this->siteId, $name);
+        $this->assertNotNull($file);
+        $ext = pathinfo((string) $file, PATHINFO_EXTENSION);
+        $posts->update((int) $old['id'], [
+            'cover_image' => $old['cover_image'] . '.' . $ext,
+            'body_html' => '<p>x</p><img src="' . $old['cover_image'] . '.' . $ext . '" alt="a"><img src="https://example.org/a.webp" alt="b">',
+        ]);
+        $this->importer->import($this->siteId, $b);
+        $new = $posts->findBySlug('hello');
+        $this->assertSame($old['cover_image'], $new['cover_image']);
+        $this->assertStringContainsString('src="' . $old['cover_image'] . '"', $new['body_html']);
+        $this->assertStringContainsString('src="https://example.org/a.webp"', $new['body_html'], 'fremde Adressen bleiben');
+        $this->assertSame($old['updated_at'], $new['updated_at']);
     }
 
     public function testDoesNotTouchOtherSites(): void
