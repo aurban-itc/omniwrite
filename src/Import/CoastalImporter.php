@@ -93,8 +93,11 @@ final class CoastalImporter
             $existing = $posts->findBySlug($slug);
             if ($existing !== null) {
                 $r['posts_skipped']++;
+                // Vor der Reparatur prüfen: unverändert heißt, dass der Beitrag seit dem Import nicht bearbeitet wurde.
+                $untouched = $this->date($p['updated_at'] ?? null) !== null && $this->date($p['updated_at'] ?? null) === (string) $existing['updated_at'];
                 $this->repairImages($posts, $existing, $siteId, $origin, (array) ($bundle['images'] ?? []), $imageMap, $r);
-                $this->restoreMissingMedia($posts, $existing, $p, $siteId, $origin, (array) ($bundle['images'] ?? []), $imageMap, $r);
+                $existing = $posts->findBySlug($slug) ?? $existing;   // Stand nach der Reparatur, damit beide sich nicht überschreiben
+                $this->restoreMissingMedia($posts, $existing, $p, $untouched, $siteId, $origin, (array) ($bundle['images'] ?? []), $imageMap, $r);
                 continue;
             }
             $cover = $this->resolveImage($siteId, (string) ($p['cover_image'] ?? ''), $origin, (array) ($bundle['images'] ?? []), $imageMap, $r);
@@ -193,6 +196,12 @@ final class CoastalImporter
         }
     }
 
+    /** @return array<string, mixed> Speicherort der Bilder für die Diagnose im Admin */
+    public function storageReport(int $siteId): array
+    {
+        return $this->images->report($siteId);
+    }
+
     /** True, wenn der Verweis auf ein eigenes Bild (/media/<site>/<datei>) zeigt, dessen Datei im Speicher fehlt. */
     private function isMissingMedia(string $ref, int $siteId): bool
     {
@@ -205,20 +214,28 @@ final class CoastalImporter
      *
      * @param array<string, mixed> $post @param array<string, mixed> $src @param array<string, string> $bundleImages @param array<string, string> $map @param array<string, mixed> $r
      */
-    private function restoreMissingMedia(PostRepository $posts, array $post, array $src, int $siteId, string $origin, array $bundleImages, array &$map, array &$r): void
+    private function restoreMissingMedia(PostRepository $posts, array $post, array $src, bool $untouched, int $siteId, string $origin, array $bundleImages, array &$map, array &$r): void
     {
         $changed = [];
         $cover = (string) $post['cover_image'];
+        $body = (string) $post['body_html'];
+        $pattern = '#(<img\b[^>]*?\bsrc=)(["\'])([^"\']+)\2#i';
+        preg_match_all($pattern, $body, $cur);
+        if (!$this->isMissingMedia($cover, $siteId) && array_filter($cur[3], fn (string $u): bool => $this->isMissingMedia($u, $siteId)) === []) {
+            return;
+        }
+        if (!$untouched) {
+            // Ohne gesicherte Zuordnung (Bilder lassen sich nach Bearbeitung nicht mehr dem Export zuordnen) nichts raten.
+            $r['warnings'][] = 'Bilder des Beitrags "' . (string) $post['slug'] . '" fehlen, der Beitrag wurde aber seit dem Import bearbeitet und nicht automatisch ersetzt. Zum Wiederherstellen den Beitrag löschen und den Export erneut importieren.';
+            return;
+        }
         if ($this->isMissingMedia($cover, $siteId)) {
             $new = $this->resolveImage($siteId, (string) ($src['cover_image'] ?? ''), $origin, $bundleImages, $map, $r);
             if ($new !== '' && !$this->isMissingMedia($new, $siteId)) {
                 $changed['cover_image'] = $new;
             }
         }
-        $body = (string) $post['body_html'];
-        $pattern = '#(<img\b[^>]*?\bsrc=)(["\'])([^"\']+)\2#i';
         preg_match_all($pattern, (string) ($src['body_html'] ?? ''), $orig);
-        preg_match_all($pattern, $body, $cur);
         $missing = array_filter($cur[3], fn (string $u): bool => $this->isMissingMedia($u, $siteId));
         if ($missing !== []) {
             if (count($orig[3]) !== count($cur[3])) {
@@ -239,7 +256,7 @@ final class CoastalImporter
             }
         }
         if ($changed !== []) {
-            $posts->update((int) $post['id'], $changed);
+            $posts->update((int) $post['id'], $changed + ['updated_at' => (string) $post['updated_at']]);   // Änderungszeit bleibt, der Beitrag gilt weiter als unbearbeitet
             $r['images_repaired']++;
         }
     }

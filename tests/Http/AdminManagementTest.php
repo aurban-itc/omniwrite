@@ -172,7 +172,10 @@ final class AdminManagementTest extends KernelTestCase
         self::assertStringContainsString('Coastal Copy', $sites->body);
         $siteId = (int) $this->pdo->query("SELECT id FROM sites WHERE slug = 'coastal'")->fetchColumn();
 
-        self::assertStringContainsString('Coastal Insights', $this->call('GET', '/admin/import')->body);
+        $form = $this->call('GET', '/admin/import')->body;
+        self::assertStringContainsString('Coastal Insights', $form);
+        self::assertStringContainsString('Speicherort der Bilder', $form);
+        self::assertStringContainsString('/images/' . $siteId, $form, 'zeigt den Bilderordner der Website');
 
         $bundle = json_encode([
             'format' => 'coastal-export/1', 'origin' => 'https://www.coastalcopy.com',
