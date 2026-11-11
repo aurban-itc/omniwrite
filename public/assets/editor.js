@@ -64,7 +64,7 @@
         return r.text().then(function (t) {
           var j = null;
           try { j = JSON.parse(t); } catch (e) { /* keine JSON-Antwort, z. B. Serverfehler oder Timeout */ }
-          if (!r.ok || j === null) throw new Error((j && j.error) || ('HTTP ' + r.status + (r.status === 504 || r.status === 502 ? ' (Zeitüberschreitung)' : '')));
+          if (!r.ok || j === null) throw new Error((j && j.error) || ('HTTP ' + r.status + (r.status === 504 ? ' (Zeitüberschreitung)' : '')));
           return j;
         });
       });
