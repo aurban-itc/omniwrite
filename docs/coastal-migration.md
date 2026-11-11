@@ -5,7 +5,8 @@ Einfachster Weg: Coastal-Blog wird eine OmniWrite-Site mit eigener Subdomain (z.
 1. **Account und Site anlegen** im Portal unter **Administration → Neuen Account anlegen** (Owner-Nutzer mit Startpasswort), danach auf der Account-Seite die Website (Slug z. B. `coastal`, Sprache EN).
 2. **Export** auf dem Coastal-Hosting (liest dort `_private/config.php`, enthält keine Zugangsdaten):
    `php tools/coastal-export.php /pfad/zu/_private/config.php /pfad/zu/public_html export.json`
-   (`tools/coastal-export.php` ist eigenständig; Datei hochladen/kopieren genügt.) Beiträge, Themen, Einstellungen (ohne Schlüssel), Empfänger und die verwendeten Bilder landen in `export.json`.
+   (`tools/coastal-export.php` ist eigenständig; Datei hochladen/kopieren genügt.)
+   **Ohne SSH und Cron:** Datei als `coastal-export.php` direkt in `public_html` legen, oben `WEB_TOKEN` auf einen langen Zufallswert setzen (mind. 24 Zeichen), `https://<domain>/coastal-export.php?t=<WEB_TOKEN>` aufrufen; der Download startet, danach löscht sich die Datei selbst (sonst sofort von Hand löschen). Ohne gesetzten Token antwortet sie nur mit 404. Beiträge, Themen, Einstellungen (ohne Schlüssel), Empfänger und die verwendeten Bilder landen in `export.json`.
 3. **Import** auf dem OmniWrite-Server: ohne SSH im Portal unter **Administration → Coastal-Import** (Ziel-Website wählen, `export.json` hochladen; Upload-Limit des Servers beachten), oder per Kommandozeile `php bin/import-coastal.php coastal export.json`.
    Wiederholbar: vorhandene Slugs, Themen-Titel und E-Mail-Adressen werden übersprungen, Einstellungen nur gesetzt, wenn leer. Status bleiben erhalten (`review` wird `in_review`). Bilder werden in den OmniWrite-Speicher übernommen; fehlende bleiben als Link auf `www.coastalcopy.com`. Relative Links im Text zeigen danach auf `www.coastalcopy.com`.
 4. **Domain**: im Portal unter Blog-Einstellungen die Subdomain eintragen, TXT- und CNAME-Eintrag setzen, prüfen lassen (siehe README).
