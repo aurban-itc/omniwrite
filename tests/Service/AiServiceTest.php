@@ -210,7 +210,7 @@ final class AiServiceTest extends DbTestCase
         [$u, $s] = $this->owner();
         $this->http->pushImage(FakeHttpClient::png());
         $url = $this->ai->generateImage($s, $u, 'Ein Bild');
-        self::assertMatchesRegularExpression('#^/media/' . $s->id() . '/[a-f0-9]{16}\.(webp|png)$#', $url);
+        self::assertMatchesRegularExpression('#^/media/' . $s->id() . '/[a-f0-9]{16}$#', $url);
         $file = basename($url);
         $path = (new ImageStore($this->dir))->pathFor($s->id(), $file);
         self::assertNotNull($path);

@@ -11,13 +11,15 @@ use RuntimeException;
  */
 final class ImageStore
 {
-    public const FILE_PATTERN = '/^[a-f0-9]{16}\.(webp|png|avif)$/';
+    /** Name mit oder ohne Endung. Die öffentliche Adresse hat keine: manche Webserver beantworten `*.webp` ohne Datei im Webroot selbst mit 404. */
+    public const FILE_PATTERN = '/^[a-f0-9]{16}(\.(webp|png|avif))?$/';
+    private const EXTENSIONS = ['webp', 'png', 'avif'];
 
     public function __construct(private readonly string $baseDir)
     {
     }
 
-    /** @return string öffentliche Adresse, z. B. /media/7/ab12cd34ef567890.webp */
+    /** @return string öffentliche Adresse, z. B. /media/7/ab12cd34ef567890 (ohne Endung) */
     public function save(int $siteId, string $raw): string
     {
         $info = @getimagesizefromstring($raw);
@@ -34,7 +36,7 @@ final class ImageStore
             if (strlen($raw) > 8 * 1024 * 1024 || file_put_contents("$dir/$name.avif", $raw) === false) {
                 throw new RuntimeException('image could not be saved');
             }
-            return "/media/$siteId/$name.avif";
+            return "/media/$siteId/$name";
         }
         $im = @imagecreatefromstring($raw);
         if ($im === false) {
@@ -45,10 +47,10 @@ final class ImageStore
         }
         imagepalettetotruecolor($im);
         if (function_exists('imagewebp') && imagewebp($im, "$dir/$name.webp", 82)) {
-            return "/media/$siteId/$name.webp";
+            return "/media/$siteId/$name";
         }
         if (imagepng($im, "$dir/$name.png")) {
-            return "/media/$siteId/$name.png";
+            return "/media/$siteId/$name";
         }
         throw new RuntimeException('image could not be saved');
     }
@@ -59,8 +61,16 @@ final class ImageStore
         if ($siteId <= 0 || preg_match(self::FILE_PATTERN, $file) !== 1) {
             return null;
         }
-        $path = $this->dir($siteId) . '/' . $file;
-        return is_file($path) ? $path : null;
+        $dir = $this->dir($siteId);
+        if (str_contains($file, '.')) {
+            return is_file("$dir/$file") ? "$dir/$file" : null;
+        }
+        foreach (self::EXTENSIONS as $ext) {
+            if (is_file("$dir/$file.$ext")) {
+                return "$dir/$file.$ext";
+            }
+        }
+        return null;
     }
 
     /**
@@ -72,7 +82,7 @@ final class ImageStore
     {
         $base = rtrim($this->baseDir, '/');
         $dir = $this->dir($siteId);
-        $files = is_dir($dir) ? array_values(array_filter(scandir($dir) ?: [], static fn (string $f): bool => preg_match(self::FILE_PATTERN, $f) === 1)) : [];
+        $files = is_dir($dir) ? array_values(array_filter(scandir($dir) ?: [], static fn (string $f): bool => str_contains($f, '.') && preg_match(self::FILE_PATTERN, $f) === 1)) : [];
         return [
             'base' => $base, 'base_real' => (string) (realpath($base) ?: ''), 'exists' => is_dir($base),
             // Schreibbar heißt: der Ordner der Website ist es, oder er fehlt und der Basisordner erlaubt, ihn anzulegen.

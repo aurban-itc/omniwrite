@@ -20,3 +20,7 @@ Liegt `storage.path` im Deploy-Ordner (Standard: `storage/` im Projekt), kann ei
 
 1. In `config/config.php` `storage.path` auf einen Ordner außerhalb des Deploy-Ordners setzen (beschreibbar für PHP), z. B. `/home/<user>/omniwrite-storage`.
 2. Den Export erneut erzeugen und unter `/admin/import` hochladen. Bestehende Beiträge bleiben, nur fehlende Bilder (Titelbild und Bilder im Text an gleicher Stelle) werden neu angelegt. Das geschieht nur bei Beiträgen, die seit dem Import nicht bearbeitet wurden (gleiche Änderungszeit wie im Export, auch Veröffentlichen oder Zurückziehen zählt als Änderung). Bei bearbeiteten Beiträgen gibt es eine Warnung; zum Wiederherstellen den Beitrag löschen und den Export erneut importieren.
+
+## Bilder: Adressen ohne Dateiendung
+
+Einige Webserver (z. B. Hostinger) beantworten `*.webp`-Adressen, zu denen im Webroot keine Datei liegt, selbst mit 404, ohne PHP aufzurufen. Deshalb liefert OmniWrite Bilder unter `/media/<site>/<id>` aus (ohne Endung, der Typ kommt aus der Datei). Beim nächsten Import werden Verweise älterer Beiträge (`…<id>.webp`) automatisch umgestellt; die alten Adressen mit Endung funktionieren dort, wo der Server sie durchlässt, weiter.
