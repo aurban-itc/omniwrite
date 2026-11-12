@@ -2,6 +2,7 @@
 <p>
   <a href="/admin/accounts/new"><?= $e($t('admin.new_account')) ?></a> ·
   <a href="/admin/sites"><?= $e($t('admin.all_sites')) ?></a> ·
+  <a href="/admin/usage"><?= $e($t('admin.usage')) ?></a> ·
   <a href="/admin/import"><?= $e($t('admin.import')) ?></a>
 </p>
 <h2><?= $e($t('admin.pending_users')) ?></h2>

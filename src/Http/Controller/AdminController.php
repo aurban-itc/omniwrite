@@ -15,6 +15,7 @@ use OmniWrite\Repository\SiteRepository;
 use OmniWrite\Repository\UserRepository;
 use OmniWrite\Service\AdminService;
 use OmniWrite\Service\SiteService;
+use OmniWrite\Service\UsageReport;
 
 /** Superadmin-Bereich (Routen sind mit Guard 'superadmin' geschützt). */
 final class AdminController
@@ -29,6 +30,7 @@ final class AdminController
         private readonly AdminService $admin,
         private readonly SiteService $siteService,
         private readonly CoastalImporter $importer,
+        private readonly UsageReport $usageReport,
     ) {
     }
 
@@ -77,6 +79,25 @@ final class AdminController
     public function sites(Request $r): Response
     {
         return $this->view->render($r, 'admin_sites', ['sites' => $this->sites->allWithAccount()]);
+    }
+
+    public function usage(Request $r): Response
+    {
+        $month = UsageReport::normalizeMonth(is_string($r->query['month'] ?? null) ? $r->query['month'] : null);
+        $report = $this->usageReport->forMonth($month);
+        if (($r->query['format'] ?? '') === 'csv') {
+            return new Response(200, [
+                'Content-Type' => 'text/csv; charset=utf-8',
+                'Content-Disposition' => 'attachment; filename="omniwrite-nutzung-' . $month . '.csv"',
+                'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'no-store',
+            ], UsageReport::csv($month, $report));
+        }
+        $dt = new \DateTimeImmutable($month . '-01');
+        return $this->view->render($r, 'admin_usage', [
+            'month' => $month, 'report' => $report,
+            'prev' => $dt->modify('-1 month')->format('Y-m'), 'next' => $dt->modify('+1 month')->format('Y-m'),
+            'hasNext' => $dt->modify('+1 month')->format('Y-m') <= gmdate('Y-m', time() + 14 * 3600),   // Websites östlich von UTC (bis +14 h) sind schon im neuen Monat
+        ]);
     }
 
     public function newAccountForm(Request $r): Response
