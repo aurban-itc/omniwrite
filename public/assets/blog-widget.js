@@ -13,6 +13,9 @@
  *   data-ow-href                  Link auf den Beitrag (#kürzel auf derselben Seite)
  * Optionen am Root: data-ow-months (12 Monatsnamen, durch Komma getrennt, für Datum als "Sept 2, 2026"), data-ow-per-page (max. 50, Standard 24), data-ow-reading-class (Klasse am <body> in der Artikel-Ansicht),
  *   data-ow-title-suffix (Seitentitel = Artikeltitel + Suffix), data-ow-date-locale.
+ * Mehr laden: hat die Site mehr Beiträge als eine Seite, erscheint unter der Liste ein Button, der die nächste Seite nachlädt. Aussehen über
+ *   <template data-ow-template="more"><button type="button" class="…">Mehr laden</button></template> (das erste Element darin wird verwendet);
+ *   ohne Vorlage wird ein einfacher <button> mit dem Text aus data-ow-more-label (Standard "Mehr laden") eingefügt.
  * Layout "featured" am Listen-Element: erste Karte groß, zwei daneben, danach Reihen zu drei; Klassen über
  *   data-ow-wrap-class, data-ow-featured-class, data-ow-side-class, data-ow-row-class.
  * Alle Inhalte werden mit textContent/Attributen gesetzt, nie mit innerHTML; Artikeltext nur über die Positivliste unten.
@@ -38,7 +41,11 @@
     var emptyTpl = root.querySelector('template[data-ow-template="empty"]');
     var baseTitle = document.title;
     var api = origin + '/api/v1/sites/' + encodeURIComponent(site) + '/posts';
+    var moreTpl = root.querySelector('template[data-ow-template="more"]');
     var cache = null;
+    var posts = [];
+    var page = 1;
+    var moreBtn = null;
 
     function getJson(url) {
       return fetch(url, { credentials: 'omit' }).then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); });
@@ -138,8 +145,37 @@
       }
     }
 
+    function updateMore() {
+      var more = !!(cache && cache.pages && page < cache.pages) && !!list;
+      if (!more) { if (moreBtn && moreBtn.parentNode) moreBtn.parentNode.removeChild(moreBtn); moreBtn = null; return; }
+      if (!moreBtn) {
+        var tpl = moreTpl && moreTpl.content.firstElementChild;
+        moreBtn = tpl ? tpl.cloneNode(true) : document.createElement('button');
+        if (!tpl) { moreBtn.type = 'button'; moreBtn.textContent = root.getAttribute('data-ow-more-label') || 'Mehr laden'; }
+        moreBtn.setAttribute('data-ow-more', '');
+        moreBtn.hidden = root.getAttribute('data-ow-view') === 'article';
+        moreBtn.addEventListener('click', loadMore);
+        list.parentNode.insertBefore(moreBtn, list.nextSibling);
+      }
+      moreBtn.disabled = false;
+    }
+    function loadMore() {
+      if (!moreBtn || moreBtn.disabled) return;
+      moreBtn.disabled = true;
+      getJson(api + '?per_page=' + perPage + '&page=' + (page + 1)).then(function (d) {
+        var known = Object.create(null);
+        posts.forEach(function (p) { known[p.slug] = 1; });
+        (d.posts || []).forEach(function (p) { if (!known[p.slug]) posts.push(p); });   // Duplikate (zwischenzeitlich neue Beiträge verschieben die Seiten) auslassen
+        page = d.page || page + 1;
+        cache.pages = d.pages;
+        renderList(posts);
+        updateMore();
+      }).catch(function () { if (moreBtn) moreBtn.disabled = false; });
+    }
+
     function setView(view) {
       root.setAttribute('data-ow-view', view);
+      if (moreBtn) moreBtn.hidden = view !== 'list';
       if (list) list.hidden = view !== 'list';
       if (article) article.hidden = view !== 'article';
       if (readingClass) document.body.classList.toggle(readingClass, view === 'article');
@@ -164,7 +200,10 @@
 
     getJson(api + '?per_page=' + perPage).then(function (d) {
       cache = d;
-      renderList(d.posts || []);
+      posts = (d.posts || []).slice();
+      page = d.page || 1;
+      renderList(posts);
+      updateMore();
       root.setAttribute('data-ow-ready', '');
       window.addEventListener('hashchange', route);
       route();
