@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS push_targets (
     config_enc TEXT NOT NULL,
     active TINYINT(1) NOT NULL DEFAULT 1,
     locked_until TIMESTAMP NULL,
+    lock_token CHAR(32) NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY idx_push_targets_site (site_id),
     CONSTRAINT fk_push_targets_site FOREIGN KEY (site_id) REFERENCES sites (id)

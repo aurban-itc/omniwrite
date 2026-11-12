@@ -91,15 +91,29 @@ final class PushFlowTest extends KernelTestCase
         $id = $this->addWebhook();
         $this->newPost();
         $ctx = new SiteContext($this->siteId);
-        self::assertTrue((new \OmniWrite\Repository\PushTargetRepository($this->pdo, $ctx))->claim($id, $this->now()));
-        $lines = $this->push->syncSite($this->site, $this->now('2026-11-12 10:05:00'));
+        self::assertNotNull((new \OmniWrite\Repository\PushTargetRepository($this->pdo, $ctx))->claim($id, $this->now()));
+        $lines = $this->push->syncSite($this->site, $this->now('2026-11-12 10:01:00'));
         self::assertStringContainsString('läuft bereits', $lines[0]);
         self::assertCount(0, $this->http->calls);
         $this->http->push(200, '');
-        $this->push->syncSite($this->site, $this->now('2026-11-12 10:20:00'));   // Sperre abgelaufen
+        $this->push->syncSite($this->site, $this->now('2026-11-12 10:05:00'));   // Sperre abgelaufen
         self::assertCount(1, $this->http->calls);
         $this->push->syncSite($this->site, $this->now('2026-11-12 10:21:00'));
         self::assertNull($this->pdo->query('SELECT locked_until FROM push_targets')->fetchColumn(), 'Sperre wird danach freigegeben');
+    }
+
+    public function testLeaseIsRenewedAndOldOwnerCannotReleaseNewLease(): void
+    {
+        $id = $this->addWebhook();
+        $repo = new \OmniWrite\Repository\PushTargetRepository($this->pdo, new SiteContext($this->siteId));
+        $old = $repo->claim($id, $this->now());
+        self::assertNotNull($old);
+        self::assertTrue($repo->renew($id, $old, $this->now('2026-11-12 10:01:00')));
+        $new = $repo->claim($id, $this->now('2026-11-12 10:10:00'));
+        self::assertNotNull($new, 'abgelaufene Sperre kann übernommen werden');
+        self::assertFalse($repo->renew($id, $old, $this->now('2026-11-12 10:10:30')), 'alter Lauf verliert die Sperre');
+        $repo->release($id, $old);
+        self::assertNull($repo->claim($id, $this->now('2026-11-12 10:10:40')), 'Freigabe mit altem Token ändert nichts');
     }
 
     public function testSyncReadsAllPublishedPostsInPages(): void

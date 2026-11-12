@@ -153,14 +153,15 @@ final class PushService
         $targetRepo = new PushTargetRepository($this->pdo, $ctx);
         foreach ($targets as $t) {
             $tid = (int) $t['id'];
-            if (!$targetRepo->claim($tid, $now)) {
+            $token = $targetRepo->claim($tid, $now);
+            if ($token === null) {
                 $lines[] = $site['slug'] . ' #' . $tid . ': Abgleich läuft bereits';
                 continue;
             }
             try {
-                array_push($lines, ...$this->syncTarget($site, $t, $desired, $posts, $states, $now, $limit));
+                array_push($lines, ...$this->syncTarget($site, $t, $desired, $posts, $states, $now, $limit, $targetRepo, $token));
             } finally {
-                $targetRepo->release($tid);
+                $targetRepo->release($tid, $token);
             }
         }
         return $lines;
@@ -170,7 +171,7 @@ final class PushService
      * @param array<string, mixed> $site @param array<string, mixed> $t @param array<int, array{0: array<string, mixed>, 1: string}> $desired
      * @return list<string>
      */
-    private function syncTarget(array $site, array $t, array $desired, PostRepository $posts, PushStateRepository $states, DateTimeImmutable $now, int $limit): array
+    private function syncTarget(array $site, array $t, array $desired, PostRepository $posts, PushStateRepository $states, DateTimeImmutable $now, int $limit, PushTargetRepository $targetRepo, string $token): array
     {
         $lines = [];
         $tid = (int) $t['id'];
@@ -206,6 +207,10 @@ final class PushService
             $todo[] = [$pid, ['id' => $pid, 'slug' => (string) ($post['slug'] ?? $row['post_slug'] ?? ''), 'title' => (string) ($post['title'] ?? $row['post_title'] ?? '')], null, $row];
         }
         foreach (array_slice($todo, 0, $limit) as [$pid, $payload, $hash, $row]) {
+            if (!$targetRepo->renew($tid, $token, new DateTimeImmutable('now', new \DateTimeZone('UTC')))) {
+                $lines[] = $site['slug'] . ' #' . $tid . ': Sperre verloren, Abgleich abgebrochen';
+                break;
+            }
             $lines[] = $this->deliver($site, $tid, $connector, $cfg, $pid, $payload, $hash, $row, $now, $states);
         }
         if (count($todo) > $limit) {
