@@ -96,7 +96,7 @@ final class AdminController
         return $this->view->render($r, 'admin_usage', [
             'month' => $month, 'report' => $report,
             'prev' => $dt->modify('-1 month')->format('Y-m'), 'next' => $dt->modify('+1 month')->format('Y-m'),
-            'isCurrent' => $month === gmdate('Y-m'),
+            'hasNext' => $dt->modify('+1 month')->format('Y-m') <= gmdate('Y-m', time() + 14 * 3600),   // Websites östlich von UTC (bis +14 h) sind schon im neuen Monat
         ]);
     }
 

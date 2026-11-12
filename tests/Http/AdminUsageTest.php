@@ -56,6 +56,21 @@ final class AdminUsageTest extends KernelTestCase
         self::assertStringContainsString('/admin/usage', $this->call('GET', '/admin')->body);
     }
 
+    public function testPlanLimitIsLabelledPerWebsite(): void
+    {
+        $this->pdo->exec('UPDATE plans SET posts_per_month = 10');
+        self::assertStringContainsString('Limit je Website 10', $this->call('GET', '/admin/usage?month=2026-11')->body);
+    }
+
+    public function testNextMonthLinkAppearsOnlyOnceSomeTimezoneHasReachedIt(): void
+    {
+        $future = gmdate('Y-m', strtotime('first day of +3 months'));
+        $past = gmdate('Y-m', strtotime('first day of -3 months'));
+        self::assertStringNotContainsString('admin.usage_next', $this->call('GET', "/admin/usage?month=$future")->body);
+        self::assertStringContainsString('Folgemonat', $this->call('GET', "/admin/usage?month=$past")->body);
+        self::assertStringNotContainsString('Folgemonat', $this->call('GET', "/admin/usage?month=$future")->body);
+    }
+
     public function testInvalidMonthFallsBackToCurrent(): void
     {
         self::assertSame(gmdate('Y-m'), UsageReport::normalizeMonth('2026-13'));

@@ -2,7 +2,7 @@
 <h1><?= $e($t('admin.usage_title')) ?>: <?= $e($month) ?></h1>
 <p>
   <a href="/admin/usage?month=<?= $e($prev) ?>">&larr; <?= $e($t('admin.usage_prev')) ?></a>
-  <?php if (!$isCurrent): ?> · <a href="/admin/usage?month=<?= $e($next) ?>"><?= $e($t('admin.usage_next')) ?> &rarr;</a><?php endif; ?>
+  <?php if ($hasNext): ?> · <a href="/admin/usage?month=<?= $e($next) ?>"><?= $e($t('admin.usage_next')) ?> &rarr;</a><?php endif; ?>
   · <a href="/admin/usage?month=<?= $e($month) ?>&amp;format=csv"><?= $e($t('admin.usage_csv')) ?></a>
 </p>
 <p><small><?= $e($t('admin.usage_hint')) ?></small></p>
@@ -10,7 +10,7 @@
 <?php foreach ($report as $a): ?>
   <div class="card">
     <strong><a href="/admin/accounts/<?= (int) $a['account_id'] ?>"><?= $e($a['account_name']) ?></a></strong>
-    <?php if ($a['plan'] !== ''): ?><small>· <?= $e($a['plan']) ?><?= $a['posts_limit'] !== null ? ' · ' . $e($t('admin.usage_limit')) . ' ' . (int) $a['posts_limit'] : '' ?></small><?php endif; ?>
+    <?php if ($a['plan'] !== ''): ?><small>· <?= $e($a['plan']) ?><?= $a['posts_limit'] !== null ? ' · ' . $e($t('admin.usage_limit_per_site')) . ' ' . (int) $a['posts_limit'] : '' ?></small><?php endif; ?>
     <table>
       <thead><tr><th><?= $e($t('admin.usage_site')) ?></th><th><?= $e($t('admin.usage_posts')) ?></th><th><?= $e($t('admin.usage_texts')) ?></th><th><?= $e($t('admin.usage_images')) ?></th></tr></thead>
       <tbody>

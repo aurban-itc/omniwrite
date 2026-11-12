@@ -220,7 +220,7 @@ return [
     'admin.usage' => 'Usage', 'admin.usage_title' => 'AI usage per month', 'admin.usage_csv' => 'Download as CSV',
     'admin.usage_prev' => 'Previous month', 'admin.usage_next' => 'Next month', 'admin.usage_none' => 'No websites yet.',
     'admin.usage_posts' => 'AI posts', 'admin.usage_texts' => 'AI texts', 'admin.usage_images' => 'AI images', 'admin.usage_site' => 'Website', 'admin.usage_total' => 'Total',
-    'admin.usage_limit' => 'Limit', 'admin.usage_hint' => 'The month follows each website\'s time zone. Failed AI calls are not counted.',
+    'admin.usage_limit_per_site' => 'Limit per website', 'admin.usage_hint' => 'The month follows each website\'s time zone. Failed AI calls are not counted.',
     'admin.no_accounts' => 'No accounts yet.',
     'admin.owner' => 'Owner (first user, optional)',
     'admin.owner_optional_hint' => 'Leave empty if you manage the account yourself. Users can be added later on the account page. Without an owner the weekly run cannot create drafts.',
