@@ -65,7 +65,7 @@ final class PageExtractor
             if ($room < 40) {
                 break;
             }
-            $text .= mb_substr($b, 0, min($room, 1500)) . "\n"; // überlange Absätze kürzen statt alles Folgende zu verlieren
+            $text .= mb_substr($b, 0, min($room, max(1500, intdiv($room, 2)))) . "\n"; // überlange Absätze kürzen statt alles Folgende zu verlieren
         }
         return ['title' => mb_substr($title, 0, 200), 'description' => mb_substr($description, 0, 400), 'text' => rtrim($text), 'links' => $links];
     }
