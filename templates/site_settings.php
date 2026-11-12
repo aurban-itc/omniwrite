@@ -1,5 +1,6 @@
 <?php include __DIR__ . '/_site_nav.php'; ?>
 <h2><?= $e($t('site.settings')) ?></h2>
+<?php if ($rs->canWrite()): ?><p><a href="/sites/<?= $e($site['slug']) ?>/settings/analyze"><?= $e($t('analyze.button')) ?></a></p><?php endif; ?>
 <?php if ($saved): ?><p class="ok"><?= $e($t('settings.saved')) ?></p><?php endif; ?>
 <form method="post" action="/sites/<?= $e($site['slug']) ?>/settings">
   <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">

@@ -45,6 +45,39 @@ final class SiteSettingsService
         return $out;
     }
 
+    /**
+     * Setzt nur die übergebenen Schlüssel (leer = Standard wiederherstellen); alle anderen bleiben unverändert.
+     * Gedacht für Übernahmen aus Vorschlägen, bei denen der Nutzer einzelne Felder auswählt.
+     *
+     * @param array<string, mixed> $in
+     */
+    public function update(ResolvedSite $s, User $actor, array $in, ?string $ip = null): void
+    {
+        if (!$s->canPublish()) {
+            throw new AccessDeniedException('Nur Owner dürfen Einstellungen ändern');
+        }
+        $errors = [];
+        $values = [];
+        foreach (self::KEYS as $key) {
+            if (!array_key_exists($key, $in)) {
+                continue;
+            }
+            $value = trim((string) $in[$key]);
+            if (mb_strlen($value) > self::MAX_LENGTH) {
+                $errors[$key] = 'err.too_long';
+            }
+            $values[$key] = $value;
+        }
+        if ($errors !== []) {
+            throw new ValidationException($errors);
+        }
+        $repo = new SiteSettingsRepository($this->pdo, $s->context);
+        foreach ($values as $key => $value) {
+            $value === '' ? $repo->delete($key) : $repo->set($key, $value);
+        }
+        $this->audit->log('site.settings', $actor->id, $s->accountId(), ['site_id' => $s->id(), 'keys' => array_keys($values)], $ip);
+    }
+
     /** @param array<string, mixed> $in */
     public function save(ResolvedSite $s, User $actor, array $in, ?string $ip = null): void
     {
