@@ -163,7 +163,7 @@
       if (!moreBtn || moreBtn.disabled) return;
       moreBtn.disabled = true;
       getJson(api + '?per_page=' + perPage + '&page=' + (page + 1)).then(function (d) {
-        var known = {};
+        var known = Object.create(null);
         posts.forEach(function (p) { known[p.slug] = 1; });
         (d.posts || []).forEach(function (p) { if (!known[p.slug]) posts.push(p); });   // Duplikate (zwischenzeitlich neue Beiträge verschieben die Seiten) auslassen
         page = d.page || page + 1;
