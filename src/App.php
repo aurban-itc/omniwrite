@@ -69,6 +69,7 @@ use OmniWrite\Push\WebhookConnector;
 use OmniWrite\Http\Controller\PushController;
 use OmniWrite\Service\SiteSettingsService;
 use OmniWrite\Service\TopicService;
+use OmniWrite\Service\UsageReport;
 use OmniWrite\Service\UsageService;
 use OmniWrite\Support\ImageStore;
 use OmniWrite\Support\Translator;
@@ -119,6 +120,7 @@ final class App
         $admin = new AdminController(
             $view, $users, $accounts, new SiteRepository($pdo), $adminService, $sites,
             new CoastalImporter($pdo, new ImageStore((string) $config->get('storage.path', $root . '/storage'))),
+            new UsageReport($pdo),
         );
 
         $siteAccess = new SiteAccess(new SiteRepository($pdo), $accounts);
@@ -250,6 +252,7 @@ final class App
         $router->add('POST', '/admin/accounts/{id}/members/{uid}/remove', $admin->removeMember(...), 'superadmin');
         $router->add('POST', '/admin/accounts/{id}/sites', $admin->createSite(...), 'superadmin');
         $router->add('GET', '/admin/sites', $admin->sites(...), 'superadmin');
+        $router->add('GET', '/admin/usage', $admin->usage(...), 'superadmin');
         $router->add('GET', '/admin/import', $admin->importForm(...), 'superadmin');
         $router->add('POST', '/admin/import', $admin->import(...), 'superadmin');
 
