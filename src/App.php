@@ -62,6 +62,11 @@ use OmniWrite\Service\AdminService;
 use OmniWrite\Service\SiteAccess;
 use OmniWrite\Service\SiteProfileService;
 use OmniWrite\Service\SiteService;
+use OmniWrite\Push\GithubConnector;
+use OmniWrite\Push\PushService;
+use OmniWrite\Push\UrlGuard;
+use OmniWrite\Push\WebhookConnector;
+use OmniWrite\Http\Controller\PushController;
 use OmniWrite\Service\SiteSettingsService;
 use OmniWrite\Service\TopicService;
 use OmniWrite\Service\UsageService;
@@ -151,6 +156,7 @@ final class App
         $publicC = new PublicBlogController($view, $publicBlog);
         $apiC = new PublicApiController($publicBlog);
         $blogC = new BlogSettingsController($siteAccess, $view, $blogSettings, $domains, $baseUrl, $portalHost);
+        $pushC = new PushController($siteAccess, $view, self::buildPush($pdo, $config, $audit, $http, $dns ?? new SystemDnsResolver(), $publicBlog));
 
         // Öffentliche Routen: am Portal unter /b/<site>, auf einer eigenen Domain an der Wurzel.
         $publicRouter = new Router();
@@ -174,6 +180,9 @@ final class App
         $router->add('GET', '/b/{site}/feed.xml', $publicC->feed(...));
         $router->add('GET', '/b/{site}/llms.txt', $publicC->llms(...));
         $router->add('GET', '/b/{site}/{post}', $publicC->post(...));
+        $router->add('GET', '/sites/{slug}/connectors', $pushC->index(...), 'user');
+        $router->add('POST', '/sites/{slug}/connectors', $pushC->add(...), 'user');
+        $router->add('POST', '/sites/{slug}/connectors/{id}/{action}', $pushC->action(...), 'user');
         $router->add('GET', '/sites/{slug}/blog', $blogC->form(...), 'user');
         $router->add('POST', '/sites/{slug}/blog', $blogC->save(...), 'user');
         $router->add('POST', '/sites/{slug}/blog/domain', $blogC->setDomain(...), 'user');
@@ -301,5 +310,23 @@ final class App
             $pdo, new ScheduleService($pdo, $audit), $ai, $topicService,
             self::buildReview($pdo, $config, $audit, $mailer, $translator), $mailer, $translator,
         );
+    }
+
+    private static function buildPush(PDO $pdo, Config $config, AuditLogger $audit, HttpClient $http, DnsResolver $dns, PublicBlogService $publicBlog): PushService
+    {
+        $guard = new UrlGuard($dns);
+        return new PushService(
+            $pdo, $audit, new SecretBox((string) $config->get('security.master_key', '')), $publicBlog,
+            ['webhook' => new WebhookConnector($http, $guard), 'github' => new GithubConnector($http)], $guard,
+        );
+    }
+
+    /** Für den Cron: gleicht veröffentlichte Beiträge mit den Push-Zielen ab. */
+    public static function pushService(PDO $pdo, Config $config, ?HttpClient $http = null, ?DnsResolver $dns = null): PushService
+    {
+        $audit = new AuditLogger($pdo);
+        $baseUrl = (string) $config->get('app.base_url', '');
+        $publicBlog = new PublicBlogService($pdo, new BlogSettingsService($pdo, $audit), $baseUrl);
+        return self::buildPush($pdo, $config, $audit, $http ?? new CurlHttpClient(), $dns ?? new SystemDnsResolver(), $publicBlog);
     }
 }
