@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blog | URBAN AI LABS</title>
+<meta name="description" content="Artikel rund um KI-Automatisierung, Agenten und Software von URBAN AI LABS.">
+<link rel="canonical" href="https://blog.urbanlabs.ai/">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="https://urbanlabs.ai/de"><span class="brand-mark">U</span> URBAN AI LABS</a>
+    <nav>
+      <a href="https://urbanlabs.ai/de">Startseite</a>
+      <a href="./" class="active">Blog</a>
+      <a href="https://urbanlabs.ai/de#contact">Kontakt</a>
+    </nav>
+    <a class="cta" href="https://advisor.urbanlabs.ai/?lang=de">KI-Analyse starten</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- Kürzel der OmniWrite-Site in data-ow-site anpassen (siehe README.md) -->
+  <div data-ow-blog data-ow-site="urbanlabs" data-ow-reading-class="reading" data-ow-title-suffix=" | URBAN AI LABS"
+       data-ow-per-page="12" data-ow-date-locale="de-DE">
+    <section class="hero">
+      <h1>Blog</h1>
+      <p>Praxiswissen zu KI-Automatisierung, Agenten und individueller Software.</p>
+    </section>
+
+    <div data-ow-list data-ow-layout="featured" data-ow-wrap-class="posts" data-ow-featured-class="featured"
+         data-ow-side-class="side-stack" data-ow-row-class="grid-row">
+      <template data-ow-template="card">
+        <a class="post-card" data-ow-href>
+          <div class="cover"><img data-ow-src="cover_image" alt="" loading="lazy"><span class="cat" data-ow="category"></span></div>
+          <div class="meta-body">
+            <h3 data-ow="title"></h3>
+            <p data-ow="excerpt"></p>
+            <span class="meta"><span data-ow="date"></span> · <span data-ow="read_minutes"></span> Min. Lesezeit</span>
+          </div>
+        </a>
+      </template>
+      <template data-ow-template="empty"><p class="empty">Bald gibt es hier neue Artikel.</p></template>
+    </div>
+
+    <template data-ow-template="more"><button type="button" class="more">Mehr laden</button></template>
+
+    <article class="article" data-ow-article hidden>
+      <a class="back" href="./">← Alle Artikel</a>
+      <div class="article-cover" data-ow-hide-if-empty><img data-ow-src="cover_image" alt=""></div>
+      <p class="meta"><span data-ow="category"></span> · <span data-ow="date"></span> · <span data-ow="read_minutes"></span> Min. Lesezeit</p>
+      <h1 data-ow="title"></h1>
+      <div class="prose" data-ow-html="body_html"></div>
+    </article>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <span>© <script>document.write(new Date().getFullYear())</script> URBAN AI LABS LTD.</span>
+    <span>
+      <a href="https://urbanlabs.ai/imprint">Impressum</a>
+      <a href="https://urbanlabs.ai/privacy-policy">Datenschutz</a>
+      <a href="mailto:contact@urbanlabs.ai">contact@urbanlabs.ai</a>
+    </span>
+  </div>
+</footer>
+<script src="https://omniwrite.urbanlabs.ai/assets/blog-widget.js" async></script>
+</body>
+</html>
