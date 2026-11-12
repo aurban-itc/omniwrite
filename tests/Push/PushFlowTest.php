@@ -60,6 +60,64 @@ final class PushFlowTest extends KernelTestCase
         return new DateTimeImmutable($at, new \DateTimeZone('UTC'));
     }
 
+    public function testWebhookAcceptsAnyTwoXxResponse(): void
+    {
+        $this->addWebhook();
+        $this->newPost();
+        $this->http->push(203, '');
+        $lines = $this->push->syncSite($this->site, $this->now());
+        self::assertStringContainsString('zugestellt', $lines[0]);
+        self::assertSame('ok', $this->pdo->query('SELECT status FROM push_state')->fetchColumn());
+    }
+
+    public function testWithdrawalOfDeletedPostKeepsDeliveredSlug(): void
+    {
+        $this->addWebhook();
+        $pid = $this->newPost();
+        $this->http->push(200, '');
+        $this->push->syncSite($this->site, $this->now());
+        $this->posts()->update($pid, ['status' => 'draft']);
+        $this->pdo->prepare('DELETE FROM posts WHERE id = :id')->execute(['id' => $pid]);
+        $this->http->push(200, '');
+        $this->push->syncSite($this->site, $this->now('2026-11-12 11:00:00'));
+        $payload = json_decode((string) $this->http->calls[1]['body'], true);
+        self::assertSame('post.unpublished', $payload['event']);
+        self::assertSame('hello', $payload['post']['slug']);
+        self::assertSame('Hallo', $payload['post']['title']);
+    }
+
+    public function testOverlappingSyncSkipsLockedTarget(): void
+    {
+        $id = $this->addWebhook();
+        $this->newPost();
+        $ctx = new SiteContext($this->siteId);
+        self::assertTrue((new \OmniWrite\Repository\PushTargetRepository($this->pdo, $ctx))->claim($id, $this->now()));
+        $lines = $this->push->syncSite($this->site, $this->now('2026-11-12 10:05:00'));
+        self::assertStringContainsString('läuft bereits', $lines[0]);
+        self::assertCount(0, $this->http->calls);
+        $this->http->push(200, '');
+        $this->push->syncSite($this->site, $this->now('2026-11-12 10:20:00'));   // Sperre abgelaufen
+        self::assertCount(1, $this->http->calls);
+        $this->push->syncSite($this->site, $this->now('2026-11-12 10:21:00'));
+        self::assertNull($this->pdo->query('SELECT locked_until FROM push_targets')->fetchColumn(), 'Sperre wird danach freigegeben');
+    }
+
+    public function testSyncReadsAllPublishedPostsInPages(): void
+    {
+        for ($i = 1; $i <= 5; $i++) {
+            $this->newPost('p' . $i);
+        }
+        $ids = [];
+        $after = 0;
+        while (($page = $this->posts()->listPublishedFull($after, 2)) !== []) {
+            foreach ($page as $p) {
+                $ids[] = (int) $p['id'];
+                $after = (int) $p['id'];
+            }
+        }
+        self::assertCount(5, array_unique($ids));
+    }
+
     public function testWebhookValidationRejectsUnsafeTargets(): void
     {
         $this->dns->addresses['internal.example.org'] = ['10.0.0.5'];

@@ -140,52 +140,76 @@ final class PushService
         $posts = new PostRepository($this->pdo, $ctx);
         $view = $this->blog->view($site, false);
         $desired = [];
-        foreach ($posts->listPublishedFull() as $p) {
-            $payload = $this->payload($p, $view);
-            $desired[(int) $p['id']] = [$payload, hash('sha256', json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR))];
+        $after = 0;
+        while (($page = $posts->listPublishedFull($after)) !== []) {
+            foreach ($page as $p) {
+                $payload = $this->payload($p, $view);
+                $desired[(int) $p['id']] = [$payload, hash('sha256', json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR))];
+                $after = (int) $p['id'];
+            }
         }
         $states = new PushStateRepository($this->pdo);
         $lines = [];
+        $targetRepo = new PushTargetRepository($this->pdo, $ctx);
         foreach ($targets as $t) {
             $tid = (int) $t['id'];
-            $connector = $this->connectors[(string) $t['kind']] ?? null;
+            if (!$targetRepo->claim($tid, $now)) {
+                $lines[] = $site['slug'] . ' #' . $tid . ': Abgleich läuft bereits';
+                continue;
+            }
             try {
-                $cfg = json_decode($this->secrets->decrypt((string) $t['config_enc']), true, 512, JSON_THROW_ON_ERROR);
-            } catch (Throwable $e) {
-                $lines[] = $site['slug'] . ' #' . $tid . ' failed: Zugangsdaten nicht lesbar (' . $e->getMessage() . ')';
+                array_push($lines, ...$this->syncTarget($site, $t, $desired, $posts, $states, $now, $limit));
+            } finally {
+                $targetRepo->release($tid);
+            }
+        }
+        return $lines;
+    }
+
+    /**
+     * @param array<string, mixed> $site @param array<string, mixed> $t @param array<int, array{0: array<string, mixed>, 1: string}> $desired
+     * @return list<string>
+     */
+    private function syncTarget(array $site, array $t, array $desired, PostRepository $posts, PushStateRepository $states, DateTimeImmutable $now, int $limit): array
+    {
+        $lines = [];
+        $tid = (int) $t['id'];
+        $connector = $this->connectors[(string) $t['kind']] ?? null;
+        try {
+            $cfg = json_decode($this->secrets->decrypt((string) $t['config_enc']), true, 512, JSON_THROW_ON_ERROR);
+        } catch (Throwable $e) {
+            return [$site['slug'] . ' #' . $tid . ' failed: Zugangsdaten nicht lesbar (' . $e->getMessage() . ')'];
+        }
+        if ($connector === null || !is_array($cfg)) {
+            return [];
+        }
+        $state = $states->forTarget((int) $site['id'], $tid);
+        $todo = [];
+        foreach ($desired as $pid => [$payload, $hash]) {
+            $row = $state[$pid] ?? null;
+            if ($row !== null && $row['delivered_hash'] === $hash) {
                 continue;
             }
-            if ($connector === null || !is_array($cfg)) {
+            if ($row !== null && $row['attempt_hash'] === $hash && !$this->due($row, $now)) {
                 continue;
             }
-            $state = $states->forTarget((int) $site['id'], $tid);
-            $todo = [];
-            foreach ($desired as $pid => [$payload, $hash]) {
-                $row = $state[$pid] ?? null;
-                if ($row !== null && $row['delivered_hash'] === $hash) {
-                    continue;
-                }
-                if ($row !== null && $row['attempt_hash'] === $hash && !$this->due($row, $now)) {
-                    continue;
-                }
-                $todo[] = [$pid, $payload, $hash, $row];
+            $todo[] = [$pid, $payload, $hash, $row];
+        }
+        foreach ($state as $pid => $row) {
+            if ($row['delivered_hash'] === null || isset($desired[$pid])) {
+                continue;
             }
-            foreach ($state as $pid => $row) {
-                if ($row['delivered_hash'] === null || isset($desired[$pid])) {
-                    continue;
-                }
-                if ($row['attempt_hash'] === '-' && !$this->due($row, $now)) {
-                    continue;
-                }
-                $post = $posts->find($pid);
-                $todo[] = [$pid, ['id' => $pid, 'slug' => (string) ($post['slug'] ?? ''), 'title' => (string) ($post['title'] ?? '')], null, $row];
+            if ($row['attempt_hash'] === '-' && !$this->due($row, $now)) {
+                continue;
             }
-            foreach (array_slice($todo, 0, $limit) as [$pid, $payload, $hash, $row]) {
-                $lines[] = $this->deliver($site, $tid, $connector, $cfg, $pid, $payload, $hash, $row, $now, $states);
-            }
-            if (count($todo) > $limit) {
-                $lines[] = $site['slug'] . ' #' . $tid . ': ' . (count($todo) - $limit) . ' weitere beim nächsten Lauf';
-            }
+            $post = $posts->find($pid);
+            $todo[] = [$pid, ['id' => $pid, 'slug' => (string) ($post['slug'] ?? $row['post_slug'] ?? ''), 'title' => (string) ($post['title'] ?? $row['post_title'] ?? '')], null, $row];
+        }
+        foreach (array_slice($todo, 0, $limit) as [$pid, $payload, $hash, $row]) {
+            $lines[] = $this->deliver($site, $tid, $connector, $cfg, $pid, $payload, $hash, $row, $now, $states);
+        }
+        if (count($todo) > $limit) {
+            $lines[] = $site['slug'] . ' #' . $tid . ': ' . (count($todo) - $limit) . ' weitere beim nächsten Lauf';
         }
         return $lines;
     }
@@ -206,7 +230,7 @@ final class PushService
                 return "$label entfernt";
             }
             $ref = $connector->publish($cfg, $site, $payload, $prev);
-            $states->save($sid, $tid, $pid, ['delivered_hash' => $hash, 'attempt_hash' => $hash, 'status' => 'ok', 'attempts' => 0, 'next_attempt_at' => null, 'last_error' => '', 'remote_ref' => mb_substr($ref, 0, 255), 'delivered_at' => $stamp]);
+            $states->save($sid, $tid, $pid, ['delivered_hash' => $hash, 'attempt_hash' => $hash, 'status' => 'ok', 'attempts' => 0, 'next_attempt_at' => null, 'last_error' => '', 'remote_ref' => mb_substr($ref, 0, 255), 'post_slug' => mb_substr((string) ($payload['slug'] ?? ''), 0, 255), 'post_title' => mb_substr((string) ($payload['title'] ?? ''), 0, 255), 'delivered_at' => $stamp]);
             return "$label zugestellt";
         } catch (PushException $e) {
             $retryable = $e->retryable;

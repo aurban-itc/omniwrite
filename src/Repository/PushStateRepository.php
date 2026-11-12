@@ -27,7 +27,7 @@ final class PushStateRepository
     /** @param array<string, mixed> $data */
     public function save(int $siteId, int $targetId, int $postId, array $data): void
     {
-        $cols = ['delivered_hash', 'attempt_hash', 'status', 'attempts', 'next_attempt_at', 'last_error', 'remote_ref', 'delivered_at'];
+        $cols = ['delivered_hash', 'attempt_hash', 'status', 'attempts', 'next_attempt_at', 'last_error', 'remote_ref', 'post_slug', 'post_title', 'delivered_at'];
         $data = array_intersect_key($data, array_flip($cols));
         $params = ['s' => $siteId, 't' => $targetId, 'p' => $postId];
         $sets = [];

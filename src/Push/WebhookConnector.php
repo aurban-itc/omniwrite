@@ -44,6 +44,6 @@ final class WebhookConnector implements PushConnector
             'X-OmniWrite-Event' => $event,
             'X-OmniWrite-Signature' => 'sha256=' . hash_hmac('sha256', $body, (string) $cfg['secret']),
         ], $body, 15, $ip);
-        PushHttp::expect($res, [200, 201, 202, 204], 'Webhook');
+        PushHttp::expect($res, range(200, 299), 'Webhook');
     }
 }

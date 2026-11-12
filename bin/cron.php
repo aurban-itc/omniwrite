@@ -35,5 +35,6 @@ foreach ($results as $r) {
 }
 foreach ($pushLines as $line) {
     echo gmdate('c') . ' push ' . $line . "\n";
+    $failed = $failed || str_contains($line, ' fehlgeschlagen: ') || str_contains($line, ' failed: ');
 }
 exit($failed ? 1 : 0);
