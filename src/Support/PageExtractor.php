@@ -61,10 +61,11 @@ final class PageExtractor
         }
         $text = '';
         foreach ($blocks as $b) {
-            if (mb_strlen($text) + mb_strlen($b) + 1 > $maxChars) {
+            $room = $maxChars - mb_strlen($text) - 1;
+            if ($room < 40) {
                 break;
             }
-            $text .= $b . "\n";
+            $text .= mb_substr($b, 0, min($room, 1500)) . "\n"; // überlange Absätze kürzen statt alles Folgende zu verlieren
         }
         return ['title' => mb_substr($title, 0, 200), 'description' => mb_substr($description, 0, 400), 'text' => rtrim($text), 'links' => $links];
     }
@@ -96,7 +97,7 @@ final class PageExtractor
             foreach (self::LINK_HINTS as $group => $words) {
                 foreach ($words as $w) {
                     if (str_contains($path, $w)) {
-                        $key = $p['scheme'] . '://' . $p['host'] . (isset($p['port']) ? ':' . $p['port'] : '') . ($p['path'] ?? '/');
+                        $key = $p['scheme'] . '://' . $p['host'] . (isset($p['port']) ? ':' . $p['port'] : '') . ($p['path'] ?? '/') . (isset($p['query']) ? '?' . $p['query'] : '');
                         $best[$group][$key] ??= strlen($path);
                         continue 3;
                     }

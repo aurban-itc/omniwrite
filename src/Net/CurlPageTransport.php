@@ -14,6 +14,8 @@ final class CurlPageTransport implements PageTransport
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RESOLVE => [$host . ':' . $port . ':' . $target], // verbindet nur mit der geprüften Adresse (kein DNS-Rebinding)
+            CURLOPT_PROXY => '',      // nie über einen Proxy: er würde die gepinnte IP umgehen
+            CURLOPT_NOPROXY => '*',
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_PROTOCOLS => CURLPROTO_HTTPS | CURLPROTO_HTTP,
             CURLOPT_REDIR_PROTOCOLS => 0,

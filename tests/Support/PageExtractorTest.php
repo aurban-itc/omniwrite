@@ -44,4 +44,16 @@ final class PageExtractorTest extends TestCase
         $html = '<body>' . str_repeat('<p>' . str_repeat('Lorem ipsum dolor sit amet. ', 5) . '</p>', 1) . implode('', array_map(static fn (int $i): string => "<p>Absatz Nummer $i mit genügend Text zum Durchzählen hier.</p>", range(1, 200))) . '</body>';
         self::assertLessThanOrEqual(1000, mb_strlen(PageExtractor::extract($html, 'https://x.example/', 1000)['text']));
     }
+
+    public function testOversizedFirstParagraphDoesNotHideLaterText(): void
+    {
+        $html = '<body><p>' . str_repeat('Sehr lang. ', 700) . '</p><p>Danach folgt die wichtige Leistungsbeschreibung des Betriebs.</p></body>';
+        self::assertStringContainsString('Leistungsbeschreibung', PageExtractor::extract($html, 'https://x.example/')['text']);
+    }
+
+    public function testSubpageLinksKeepQuery(): void
+    {
+        $html = '<body><a href="/about?lang=en">About</a></body>';
+        self::assertSame(['https://x.example/about?lang=en'], PageExtractor::extract($html, 'https://x.example/')['links']);
+    }
 }

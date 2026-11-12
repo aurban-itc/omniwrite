@@ -132,7 +132,14 @@ final class SafePageFetcher implements PageFetcher
         if (str_starts_with($location, '/')) {
             return $origin . $location;
         }
-        $dir = preg_replace('#/[^/]*$#', '/', $b['path'] ?? '/');
+        $path = $b['path'] ?? '/';
+        if (str_starts_with($location, '?')) { // nur Query: gleicher Pfad
+            return $origin . $path . $location;
+        }
+        if (str_starts_with($location, '#')) { // nur Fragment: dieselbe Seite
+            return $origin . $path . (isset($b['query']) ? '?' . $b['query'] : '');
+        }
+        $dir = preg_replace('#/[^/]*$#', '/', $path);
         return $origin . $dir . $location;
     }
 

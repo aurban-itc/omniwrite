@@ -132,6 +132,14 @@ final class SafePageFetcherTest extends TestCase
         self::assertSame('https://example.com/de/', $this->calls[1]['url']);
     }
 
+    public function testQueryOnlyAndFragmentRedirectsKeepPath(): void
+    {
+        $this->responses = [$this->redirect('?lang=en'), $this->redirect('#top'), $this->ok()];
+        $this->fetcher()->fetch('https://example.com/company/about');
+        self::assertSame('https://example.com/company/about?lang=en', $this->calls[1]['url']);
+        self::assertSame('https://example.com/company/about?lang=en', $this->calls[2]['url']);
+    }
+
     public function testRedirectLoopIsStopped(): void
     {
         $this->responses = array_fill(0, 10, $this->redirect('/again'));
